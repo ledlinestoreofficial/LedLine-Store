@@ -1,0 +1,6 @@
+{
+  "name": "LED LINE | متجر ليد لاين للإنارة وأخشاب الجدران",
+  "description": "متجر إلكتروني احترافي وعصري لشراء إضاءات LED والإنارات المعمارية وألواح أخشاب الجدران الديكورية والبروفايلات الذكية.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

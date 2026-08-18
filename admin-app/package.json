@@ -1,0 +1,31 @@
+{
+  "name": "ledline-admin-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LED LINE™ - Standalone Executive Next.js Admin Dashboard with Direct Private Sanity BFF Server Actions",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start -p 3001",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tailwindcss/postcss": "^4.1.14",
+    "dotenv": "^17.2.3",
+    "lucide-react": "^0.546.0",
+    "next": "^15.2.1",
+    "postcss": "^8.5.3",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "autoprefixer": "^10.4.21",
+    "tailwindcss": "^4.1.14",
+    "typescript": "~5.8.2"
+  }
+}
