@@ -324,34 +324,59 @@ export async function mutateSanityPrivate(
  * Upload an image asset directly to Sanity Image Assets API
  */
 export async function uploadSanityImageAsset(
-  base64DataUrl: string,
-  filename: string = 'product-image.jpg'
+  imageSource: string | Buffer,
+  filename: string = 'image.jpg',
+  explicitMimeType?: string
 ): Promise<{ assetId: string; url: string; ref: string } | null> {
   const config = getSanityServerConfig();
 
   if (!config.projectId || !config.writeToken) {
+    console.warn('[Sanity Upload Notice] Missing Project ID or Write Token');
     return null;
   }
 
   try {
-    const matches = base64DataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    let mimeType = 'image/jpeg';
+    let mimeType = explicitMimeType || 'image/jpeg';
     let buffer: Buffer;
 
-    if (matches && matches.length === 3) {
-      mimeType = matches[1];
-      buffer = Buffer.from(matches[2], 'base64');
+    if (Buffer.isBuffer(imageSource)) {
+      buffer = imageSource;
+    } else if (typeof imageSource === 'string' && imageSource.startsWith('data:')) {
+      const matches = imageSource.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        mimeType = matches[1];
+        buffer = Buffer.from(matches[2], 'base64');
+      } else {
+        buffer = Buffer.from(imageSource.replace(/^data:[^;]+;base64,/, ''), 'base64');
+      }
+    } else if (typeof imageSource === 'string' && (imageSource.startsWith('http://') || imageSource.startsWith('https://'))) {
+      // Remote URL - fetch it and upload to Sanity asset
+      const remoteRes = await fetch(imageSource);
+      if (!remoteRes.ok) return null;
+      const remoteArrayBuffer = await remoteRes.arrayBuffer();
+      buffer = Buffer.from(remoteArrayBuffer);
+      const ct = remoteRes.headers.get('content-type');
+      if (ct) mimeType = ct;
+    } else if (typeof imageSource === 'string') {
+      buffer = Buffer.from(imageSource, 'base64');
     } else {
-      buffer = Buffer.from(base64DataUrl, 'base64');
+      return null;
+    }
+
+    // Determine clean filename extension
+    let cleanFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+    if (!cleanFilename.includes('.')) {
+      const ext = mimeType.includes('png') ? '.png' : mimeType.includes('webp') ? '.webp' : '.jpg';
+      cleanFilename += ext;
     }
 
     const uploadUrl = new URL(
       `https://${config.projectId}.api.sanity.io/v${config.apiVersion}/assets/images/${config.dataset}`
     );
-    uploadUrl.searchParams.set('filename', filename);
+    uploadUrl.searchParams.set('filename', cleanFilename);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s upload timeout
 
     const response = await fetch(uploadUrl.toString(), {
       method: 'POST',
@@ -366,9 +391,8 @@ export async function uploadSanityImageAsset(
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      if (response.status === 401) {
-        console.warn('[Sanity Image Upload Notice] 401 Unauthorized - using direct image data URL.');
-      }
+      const errText = await response.text();
+      console.warn(`[Sanity Image Upload Status ${response.status}]:`, errText);
       return null;
     }
 
@@ -382,7 +406,8 @@ export async function uploadSanityImageAsset(
     }
 
     return null;
-  } catch {
+  } catch (err) {
+    console.warn('[Sanity Image Upload Exception]:', err instanceof Error ? err.message : err);
     return null;
   }
 }
@@ -556,20 +581,40 @@ export async function adminGetOrders(): Promise<OrderRecord[]> {
 export async function getSanityCategories(): Promise<CategoryData[]> {
   const [products, rawCategories] = await Promise.all([
     getSanityProducts(),
-    querySanityPrivate<CategoryData[]>(`*[_type == "category"] {
+    querySanityPrivate<CategoryData[]>(`*[_type == "category"] | order(_createdAt asc) {
       "id": _id,
       name,
       nameEn,
       icon,
       count,
-      "image": image.asset->url,
+      "image": coalesce(image.asset->url, imageUrl, image, ""),
       description
     }`),
   ]);
 
-  const baseCategories = (rawCategories && rawCategories.length > 0)
-    ? rawCategories
-    : storeRepo.getCategories();
+  const defaultCategories = storeRepo.getCategories();
+  let baseCategories: CategoryData[] = [];
+
+  if (rawCategories && rawCategories.length > 0) {
+    // Map fetched categories
+    const sanityMap = new Map(rawCategories.map((c) => [c.id, c]));
+    // Merge defaults so standard category ids maintain icons/images if not set
+    const merged = rawCategories.map((c) => {
+      const def = defaultCategories.find((d) => d.id === c.id);
+      return {
+        ...c,
+        image: c.image || def?.image || 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=800&auto=format&fit=crop',
+        icon: c.icon || def?.icon || 'Sparkles',
+        nameEn: c.nameEn || def?.nameEn || c.name,
+      };
+    });
+
+    // Also include any default categories not in Sanity yet
+    const missingDefaults = defaultCategories.filter((d) => !sanityMap.has(d.id));
+    baseCategories = [...merged, ...missingDefaults];
+  } else {
+    baseCategories = defaultCategories;
+  }
 
   // Compute real actual count for each category based on live products
   return baseCategories.map((cat) => {

@@ -158,7 +158,11 @@ export async function saveProductAction(productData: Partial<Product>): Promise<
     // Execute Sanity mutation
     const sanityResult = await mutateSanityPrivate([
       {
-        createOrReplace: doc,
+        createOrReplace: {
+          ...doc,
+          image: imageRefs.length > 0 ? imageRefs[0] : undefined,
+          mainImage: imageRefs.length > 0 ? imageRefs[0] : undefined,
+        },
       },
     ]);
 
@@ -327,28 +331,65 @@ export async function deleteOrderAction(orderId: string): Promise<ActionResult> 
  */
 export async function saveCategoryAction(category: Partial<CategoryData>): Promise<ActionResult> {
   try {
-    const saved = storeRepo.saveCategory(category);
+    const docId = category.id || `cat-${Date.now()}`;
+    let resolvedImage = category.image || 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=800&auto=format&fit=crop';
+    let imageRef: { _type: 'image'; asset: { _type: 'reference'; _ref: string } } | undefined = undefined;
 
-    const docId = saved.id || `cat-${Date.now()}`;
-    const doc = {
+    // Upload base64 image if present
+    if (category.image && typeof category.image === 'string' && category.image.startsWith('data:image/')) {
+      const uploaded = await uploadSanityImageAsset(
+        category.image,
+        `${category.id || 'cat'}-image.jpg`
+      );
+      if (uploaded) {
+        resolvedImage = uploaded.url;
+        imageRef = {
+          _type: 'image',
+          asset: {
+            _type: 'reference',
+            _ref: uploaded.ref,
+          },
+        };
+      }
+    }
+
+    const saved = storeRepo.saveCategory({
+      ...category,
+      id: docId,
+      image: resolvedImage,
+    });
+
+    const doc: Record<string, unknown> = {
       _type: 'category',
       _id: docId,
       name: saved.name,
-      nameEn: saved.nameEn,
-      icon: saved.icon,
-      description: saved.description,
-      count: saved.count,
+      nameEn: saved.nameEn || saved.name,
+      icon: saved.icon || 'Sparkles',
+      description: saved.description || '',
+      count: saved.count || 0,
+      imageUrl: resolvedImage,
+      image: imageRef || resolvedImage,
+      updatedAt: new Date().toISOString(),
     };
 
-    await mutateSanityPrivate([
+    const sanityResult = await mutateSanityPrivate([
       {
         createOrReplace: doc,
       },
     ]);
 
     invalidateSanityCache();
+    revalidatePath('/', 'layout');
     revalidatePath('/categories');
-    return { success: true, message: 'تم حفظ القسم بنجاح' };
+    revalidatePath('/admin/categories');
+    revalidatePath('/admin');
+    revalidatePath('/');
+
+    return {
+      success: true,
+      message: 'تم حفظ القسم ورفع صورته بنجاح إلى Sanity',
+      transactionId: sanityResult?.transactionId,
+    };
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'خطأ غير معروف';
     return { success: false, error: msg };
@@ -369,7 +410,11 @@ export async function deleteCategoryAction(categoryId: string): Promise<ActionRe
     ]);
 
     invalidateSanityCache();
+    revalidatePath('/', 'layout');
     revalidatePath('/categories');
+    revalidatePath('/admin/categories');
+    revalidatePath('/admin');
+    revalidatePath('/');
     return { success: true, message: 'تم حذف القسم بنجاح' };
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'خطأ غير معروف';

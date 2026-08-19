@@ -147,29 +147,70 @@ export function ProductFormModal({
     }));
   };
 
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [uploadStatusMsg, setUploadStatusMsg] = useState<string | null>(null);
+
   const handleSkuInput = (val: string) => {
     const englishVal = toEnglishDigits(val).toUpperCase();
     setFormData((prev) => ({ ...prev, sku: englishVal }));
   };
 
-  // Local Device File Upload Handler
-  const handleFileUpload = (files: FileList | null) => {
+  // Direct Sanity Upload Handler
+  const handleFileUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
+    const validFiles = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    if (validFiles.length === 0) return;
 
-    Array.from(files).forEach((file) => {
-      if (!file.type.startsWith('image/')) return;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64Url = e.target?.result as string;
-        if (base64Url) {
-          setFormData((prev) => ({
-            ...prev,
-            images: [...(prev.images || []), base64Url],
-          }));
+    setIsUploadingImage(true);
+    setUploadStatusMsg(`جاري رفع ${validFiles.length} صورة إلى Sanity مباشرة...`);
+
+    const uploadedUrls: string[] = [];
+
+    for (let i = 0; i < validFiles.length; i++) {
+      const file = validFiles[i];
+      setUploadStatusMsg(`جاري رفع الصورة (${i + 1} من ${validFiles.length}) إلى Sanity...`);
+
+      try {
+        const formDataPayload = new FormData();
+        formDataPayload.append('file', file);
+
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formDataPayload,
+        });
+
+        const data = await res.json();
+        if (data.success && data.url) {
+          uploadedUrls.push(data.url);
+        } else {
+          // Fallback to data URL
+          const base64: string = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target?.result as string);
+            reader.readAsDataURL(file);
+          });
+          if (base64) uploadedUrls.push(base64);
         }
-      };
-      reader.readAsDataURL(file);
-    });
+      } catch {
+        // Fallback to data URL
+        const base64: string = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.readAsDataURL(file);
+        });
+        if (base64) uploadedUrls.push(base64);
+      }
+    }
+
+    if (uploadedUrls.length > 0) {
+      setFormData((prev) => ({
+        ...prev,
+        images: [...(prev.images || []), ...uploadedUrls],
+      }));
+    }
+
+    setIsUploadingImage(false);
+    setUploadStatusMsg(null);
   };
 
   // Drag and Drop
@@ -556,23 +597,42 @@ export function ProductFormModal({
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => {
+                if (!isUploadingImage) fileInputRef.current?.click();
+              }}
               className={`border-2 border-dashed rounded-3xl p-6 text-center cursor-pointer transition-all ${
                 isDragging
                   ? 'border-[#111111] bg-[#F5F5F5] scale-[0.99]'
+                  : isUploadingImage
+                  ? 'border-[#111111] bg-[#FAF9F5]'
                   : 'border-[#D1D5DB] bg-[#F9FAFB] hover:border-[#111111] hover:bg-white'
               }`}
             >
               <div className="flex flex-col items-center justify-center gap-2">
                 <div className="w-12 h-12 rounded-2xl bg-white border border-[#E5E5E5] flex items-center justify-center text-[#111111] shadow-2xs">
-                  <Upload className="w-6 h-6" />
+                  {isUploadingImage ? (
+                    <Loader2 className="w-6 h-6 animate-spin text-[#111111]" />
+                  ) : (
+                    <Upload className="w-6 h-6" />
+                  )}
                 </div>
-                <p className="text-xs font-bold text-[#111111]">
-                  اضغط هنا لاختيار صور من جهازك أو اسحب الصور وأفلتها هنا
-                </p>
-                <p className="text-[11px] text-[#757575]">
-                  يدعم صور JPG, PNG, WEBP عالية الدقة
-                </p>
+                {isUploadingImage ? (
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-[#111111]">
+                      {uploadStatusMsg || 'جاري رفع الصور إلى سيرفرات Sanity...'}
+                    </p>
+                    <p className="text-[10px] text-[#757575]">يرجى الانتظار بضع ثوانٍ</p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs font-bold text-[#111111]">
+                      اضغط هنا لاختيار صور من جهازك أو اسحب الصور وأفلتها هنا
+                    </p>
+                    <p className="text-[11px] text-[#757575]">
+                      يتم رفع الصور مباشرة إلى Sanity CDN وحفظها بأعلى جودة
+                    </p>
+                  </>
+                )}
               </div>
             </div>
 
