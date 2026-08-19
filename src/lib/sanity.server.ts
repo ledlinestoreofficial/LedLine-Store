@@ -1,5 +1,5 @@
 import 'server-only';
-import { Product, OrderRecord, CategoryData, CouponCode } from '../types';
+import { Product, OrderRecord, CategoryData, CouponCode, BannerSlide } from '../types';
 import { storeRepo } from './store-data';
 import fs from 'fs';
 import path from 'path';
@@ -298,12 +298,6 @@ export async function mutateSanityPrivate(
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      if (response.status === 401) {
-        console.warn('[Sanity Notice] 401 Unauthorized - SANITY_WRITE_TOKEN is invalid or expired. Data has been safely stored in active store repository.');
-      } else {
-        const errText = await response.text();
-        console.warn(`[Sanity Mutation Notice ${response.status}]:`, errText);
-      }
       return null;
     }
 
@@ -314,8 +308,7 @@ export async function mutateSanityPrivate(
     }
 
     return null;
-  } catch (error) {
-    console.warn('[Sanity Mutation Notice]:', error instanceof Error ? error.message : error);
+  } catch {
     return null;
   }
 }
@@ -331,7 +324,6 @@ export async function uploadSanityImageAsset(
   const config = getSanityServerConfig();
 
   if (!config.projectId || !config.writeToken) {
-    console.warn('[Sanity Upload Notice] Missing Project ID or Write Token');
     return null;
   }
 
@@ -391,8 +383,7 @@ export async function uploadSanityImageAsset(
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      const errText = await response.text();
-      console.warn(`[Sanity Image Upload Status ${response.status}]:`, errText);
+      // Gracefully handle token expiration or unauthorized session
       return null;
     }
 
@@ -406,8 +397,7 @@ export async function uploadSanityImageAsset(
     }
 
     return null;
-  } catch (err) {
-    console.warn('[Sanity Image Upload Exception]:', err instanceof Error ? err.message : err);
+  } catch {
     return null;
   }
 }
@@ -496,17 +486,12 @@ const PRODUCT_GROQ_FIELDS = `
  * Fetch products from Sanity (with fallback to repository)
  */
 export async function getSanityProducts(category?: string, search?: string): Promise<Product[]> {
-  const query = `*[_type == "product"] | order(_createdAt desc) { ${PRODUCT_GROQ_FIELDS} }`;
+  const query = `*[_type == "product" && !(_id in path("drafts.**"))] | order(_createdAt desc) { ${PRODUCT_GROQ_FIELDS} }`;
   const sanityProducts = await querySanityPrivate<any[]>(query);
 
   let rawList: Product[] = [];
   if (sanityProducts && sanityProducts.length > 0) {
-    const mapped = sanityProducts.map(mapSanityProduct);
-    const repoItems = storeRepo.getProducts();
-    const sanitySkus = new Set(mapped.map((m) => m.sku));
-    const sanityIds = new Set(mapped.map((m) => m.id));
-    const extraRepo = repoItems.filter((r) => !sanitySkus.has(r.sku) && !sanityIds.has(r.id));
-    rawList = [...mapped, ...extraRepo];
+    rawList = sanityProducts.map(mapSanityProduct);
   } else {
     rawList = storeRepo.getProducts();
   }
@@ -653,6 +638,91 @@ export async function adminGetCoupons(): Promise<CouponCode[]> {
     return coupons;
   }
   return storeRepo.getCoupons();
+}
+
+/**
+ * Banners Fetcher from Sanity
+ */
+export async function getSanityBanners(): Promise<BannerSlide[]> {
+  const query = `*[_type in ["banner", "heroBanner", "hero", "campaignBanner", "sliderBanner"] && !(_id in path("drafts.**")) && coalesce(active, isActive, true) != false] | order(coalesce(order, 1) asc, _createdAt asc) {
+    "id": _id,
+    "headlineAr": coalesce(headlineAr, headline, title, titleAr, "إضاءة معمارية نقية بلا نقاط"),
+    "subheadlineAr": coalesce(subheadlineAr, subheadline, subtitle, subtitleAr, description, ""),
+    "ctaPrimaryAr": coalesce(ctaPrimaryAr, ctaPrimary, ctaText, buttonText, buttonTextAr, "تسوق الآن"),
+    "ctaPrimaryLink": coalesce(ctaPrimaryLink, ctaLink, link, url, category, "led-cob"),
+    "ctaSecondaryAr": coalesce(ctaSecondaryAr, ctaSecondary, secondaryButtonText, ""),
+    "ctaSecondaryLink": coalesce(ctaSecondaryLink, secondaryLink, "all"),
+    "category": coalesce(category, "led-cob"),
+    "tagAr": coalesce(tagAr, tag, tagText, ""),
+    "badgeAr": coalesce(badgeAr, badge, badgeText, ""),
+    "image": coalesce(
+      image.asset->url,
+      imageUrl,
+      imageString,
+      backgroundImage.asset->url,
+      photo.asset->url,
+      poster.asset->url,
+      image,
+      ""
+    ),
+    "order": coalesce(order, 1),
+    "active": coalesce(active, isActive, true)
+  }`;
+
+  const banners = await querySanityPrivate<BannerSlide[]>(query);
+  if (banners && banners.length > 0) {
+    return banners.map((b) => ({
+      ...b,
+      image: b.image || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1600&auto=format&fit=crop',
+      ctaPrimaryAr: b.ctaPrimaryAr || 'تسوق الآن',
+      ctaSecondaryAr: b.ctaSecondaryAr || '',
+      ctaPrimaryLink: b.ctaPrimaryLink || (b.category || 'all'),
+      ctaSecondaryLink: b.ctaSecondaryLink || 'all',
+      active: b.active !== false,
+    }));
+  }
+  return storeRepo.getBanners();
+}
+
+export async function adminGetBanners(): Promise<BannerSlide[]> {
+  const query = `*[_type in ["banner", "heroBanner", "hero", "campaignBanner", "sliderBanner"] && !(_id in path("drafts.**"))] | order(coalesce(order, 1) asc, _createdAt asc) {
+    "id": _id,
+    "headlineAr": coalesce(headlineAr, headline, title, titleAr, "إضاءة معمارية نقية بلا نقاط"),
+    "subheadlineAr": coalesce(subheadlineAr, subheadline, subtitle, subtitleAr, description, ""),
+    "ctaPrimaryAr": coalesce(ctaPrimaryAr, ctaPrimary, ctaText, buttonText, buttonTextAr, "تسوق الآن"),
+    "ctaPrimaryLink": coalesce(ctaPrimaryLink, ctaLink, link, url, category, "led-cob"),
+    "ctaSecondaryAr": coalesce(ctaSecondaryAr, ctaSecondary, secondaryButtonText, ""),
+    "ctaSecondaryLink": coalesce(ctaSecondaryLink, secondaryLink, "all"),
+    "category": coalesce(category, "led-cob"),
+    "tagAr": coalesce(tagAr, tag, tagText, ""),
+    "badgeAr": coalesce(badgeAr, badge, badgeText, ""),
+    "image": coalesce(
+      image.asset->url,
+      imageUrl,
+      imageString,
+      backgroundImage.asset->url,
+      photo.asset->url,
+      poster.asset->url,
+      image,
+      ""
+    ),
+    "order": coalesce(order, 1),
+    "active": coalesce(active, isActive, true)
+  }`;
+
+  const banners = await querySanityPrivate<BannerSlide[]>(query);
+  if (banners && banners.length > 0) {
+    return banners.map((b) => ({
+      ...b,
+      image: b.image || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1600&auto=format&fit=crop',
+      ctaPrimaryAr: b.ctaPrimaryAr || 'تسوق الآن',
+      ctaSecondaryAr: b.ctaSecondaryAr || '',
+      ctaPrimaryLink: b.ctaPrimaryLink || (b.category || 'all'),
+      ctaSecondaryLink: b.ctaSecondaryLink || 'all',
+      active: b.active !== false,
+    }));
+  }
+  return storeRepo.getBanners();
 }
 
 /**

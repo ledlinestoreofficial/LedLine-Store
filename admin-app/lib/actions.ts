@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { mutateSanityPrivate, uploadSanityImageAsset, invalidateSanityCache, getSanityConnectionStatus } from './sanity.server';
-import { Product, OrderStatus, CategoryData, CouponCode } from '../types';
+import { Product, OrderStatus, CategoryData, CouponCode, BannerSlide } from '../types';
 import { storeRepo } from '@/src/lib/store-data';
 import { GoogleGenAI } from '@google/genai';
 
@@ -199,24 +199,30 @@ export async function deleteProductAction(productId: string): Promise<ActionResu
       return { success: false, error: 'معرف المنتج غير صالح' };
     }
 
+    // 1. Remove from local repository permanently
     storeRepo.deleteProduct(productId);
 
-    const sanityResult = await mutateSanityPrivate([
-      {
-        delete: { id: productId },
-      },
-    ]);
+    // 2. Delete from Sanity (both published document and any drafts)
+    const baseId = productId.startsWith('drafts.') ? productId.replace('drafts.', '') : productId;
+    const idsToDelete = [baseId, `drafts.${baseId}`];
+
+    const sanityResult = await mutateSanityPrivate(
+      idsToDelete.map((id) => ({
+        delete: { id },
+      }))
+    );
 
     invalidateSanityCache();
     revalidatePath('/', 'layout');
     revalidatePath('/admin/products');
     revalidatePath('/products');
     revalidatePath('/inventory');
+    revalidatePath('/admin');
     revalidatePath('/');
 
     return {
       success: true,
-      message: 'تم حذف المنتج بنجاح',
+      message: 'تم حذف المنتج نهائياً من Sanity والمتجر',
       transactionId: sanityResult?.transactionId || `del-${Date.now()}`,
     };
   } catch (error: unknown) {
@@ -477,6 +483,172 @@ export async function deleteCouponAction(couponId: string): Promise<ActionResult
     return { success: true, message: 'تم حذف كود الخصم بنجاح' };
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'خطأ غير معروف';
+    return { success: false, error: msg };
+  }
+}
+
+function extractSanityAssetRef(url: string): string | null {
+  if (!url || typeof url !== 'string') return null;
+  const match = url.match(/\/images\/[^\/]+\/[^\/]+\/([a-zA-Z0-9_-]+)\.([a-zA-Z0-9]+)/);
+  if (match) {
+    const filenameWithoutExt = match[1];
+    const ext = match[2];
+    return `image-${filenameWithoutExt}-${ext}`;
+  }
+  return null;
+}
+
+/**
+ * Save or Update Banner in Sanity
+ */
+export async function saveBannerAction(bannerData: Partial<BannerSlide>): Promise<ActionResult> {
+  try {
+    const isEdit = Boolean(bannerData.id);
+    const docId = isEdit ? bannerData.id! : `banner-${Date.now()}`;
+
+    let imageUrl = bannerData.image || '';
+    let imageAssetRef: string | null = null;
+
+    // 1. Handle base64 or remote external URL image upload directly to Sanity Image Assets
+    if (imageUrl.startsWith('data:image/') || (imageUrl.startsWith('http') && !imageUrl.includes('cdn.sanity.io'))) {
+      const uploaded = await uploadSanityImageAsset(
+        imageUrl,
+        `banner-${docId}.jpg`
+      );
+      if (uploaded) {
+        imageUrl = uploaded.url;
+        imageAssetRef = uploaded.ref || uploaded.assetId;
+      }
+    } else if (imageUrl.includes('cdn.sanity.io')) {
+      imageAssetRef = extractSanityAssetRef(imageUrl);
+    }
+
+    const headlineText = bannerData.headlineAr || 'إضاءة معمارية نقية بلا نقاط';
+    const subheadlineText = bannerData.subheadlineAr || '';
+    const ctaPrimaryText = bannerData.ctaPrimaryAr || 'تسوق الآن';
+    const ctaPrimaryTarget = bannerData.ctaPrimaryLink || bannerData.category || 'led-cob';
+    const ctaSecondaryText = bannerData.ctaSecondaryAr || '';
+    const ctaSecondaryTarget = bannerData.ctaSecondaryLink || 'all';
+    const cat = bannerData.category || 'led-cob';
+    const tagText = bannerData.tagAr || '';
+    const badgeText = bannerData.badgeAr || '';
+    const sortOrder = bannerData.order !== undefined ? Number(bannerData.order) : 1;
+    const isBannerActive = bannerData.active !== false;
+
+    const bannerDoc: Record<string, unknown> = {
+      _id: docId,
+      _type: 'banner',
+      title: headlineText,
+      headline: headlineText,
+      headlineAr: headlineText,
+      subheadline: subheadlineText,
+      subheadlineAr: subheadlineText,
+      subtitle: subheadlineText,
+      ctaPrimaryAr: ctaPrimaryText,
+      ctaPrimary: ctaPrimaryText,
+      ctaText: ctaPrimaryText,
+      buttonText: ctaPrimaryText,
+      ctaPrimaryLink: ctaPrimaryTarget,
+      ctaLink: ctaPrimaryTarget,
+      ctaSecondaryAr: ctaSecondaryText,
+      ctaSecondary: ctaSecondaryText,
+      ctaSecondaryLink: ctaSecondaryTarget,
+      category: cat,
+      tag: tagText,
+      tagAr: tagText,
+      badge: badgeText,
+      badgeAr: badgeText,
+      imageUrl: imageUrl,
+      imageString: imageUrl,
+      order: sortOrder,
+      active: isBannerActive,
+      isActive: isBannerActive,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (imageAssetRef) {
+      bannerDoc.image = {
+        _type: 'image',
+        asset: {
+          _type: 'reference',
+          _ref: imageAssetRef,
+        },
+      };
+    } else if (imageUrl) {
+      bannerDoc.image = imageUrl;
+    }
+
+    // Save in local repository for instant UI sync
+    storeRepo.saveBanner({
+      id: docId,
+      headlineAr: headlineText,
+      subheadlineAr: subheadlineText,
+      ctaPrimaryAr: ctaPrimaryText,
+      ctaPrimaryLink: ctaPrimaryTarget,
+      ctaSecondaryAr: ctaSecondaryText,
+      ctaSecondaryLink: ctaSecondaryTarget,
+      category: cat,
+      tagAr: tagText,
+      badgeAr: badgeText,
+      image: imageUrl,
+      order: sortOrder,
+      active: isBannerActive,
+    });
+
+    const res = await mutateSanityPrivate([
+      {
+        createOrReplace: bannerDoc,
+      },
+    ]);
+
+    invalidateSanityCache();
+    revalidatePath('/admin/banners');
+    revalidatePath('/admin');
+    revalidatePath('/', 'layout');
+    revalidatePath('/');
+
+    return {
+      success: true,
+      message: 'تم حفظ وتحديث البنر الإعلاني بنجاح ومزامنته مع Sanity والمتجر',
+      transactionId: res?.transactionId || `banner-tx-${Date.now()}`,
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'خطأ غير معروف في حفظ البنر';
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * Delete Banner Action
+ */
+export async function deleteBannerAction(bannerId: string): Promise<ActionResult> {
+  try {
+    // 1. Remove from local repository permanently
+    storeRepo.deleteBanner(bannerId);
+
+    // 2. Delete from Sanity (both published document and any drafts)
+    const baseId = bannerId.startsWith('drafts.') ? bannerId.replace('drafts.', '') : bannerId;
+    const idsToDelete = [baseId, `drafts.${baseId}`];
+
+    const sanityResult = await mutateSanityPrivate(
+      idsToDelete.map((id) => ({
+        delete: { id },
+      }))
+    );
+
+    invalidateSanityCache();
+    revalidatePath('/admin/banners');
+    revalidatePath('/admin');
+    revalidatePath('/', 'layout');
+    revalidatePath('/');
+
+    return {
+      success: true,
+      message: 'تم حذف البنر الإعلاني نهائياً من Sanity والمتجر',
+      transactionId: sanityResult?.transactionId || `del-${Date.now()}`,
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'خطأ غير معروف في حذف البنر';
     return { success: false, error: msg };
   }
 }

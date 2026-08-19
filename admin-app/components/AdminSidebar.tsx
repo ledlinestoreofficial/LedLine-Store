@@ -14,10 +14,12 @@ import {
   Sparkles,
   ExternalLink,
   ShieldCheck,
+  Megaphone,
 } from 'lucide-react';
 
 const RAW_NAV_ITEMS = [
   { path: '', label: 'نظرة عامة', icon: LayoutDashboard },
+  { path: '/banners', label: 'البنرات الإعلانية', icon: Megaphone },
   { path: '/products', label: 'المنتجات والكتالوج', icon: Package },
   { path: '/orders', label: 'الطلبات والمبيعات', icon: ShoppingBag },
   { path: '/categories', label: 'الأقسام والتصنيفات', icon: Layers },

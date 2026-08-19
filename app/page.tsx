@@ -1,14 +1,15 @@
-import { getSanityProducts, getSanityCategories } from '@/src/lib/sanity.server';
+import { getSanityProducts, getSanityCategories, getSanityBanners } from '@/src/lib/sanity.server';
 import { StoreClient } from '@/src/components/StoreClient';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function HomePage() {
-  const [products, categories] = await Promise.all([
+  const [products, categories, banners] = await Promise.all([
     getSanityProducts(),
     getSanityCategories(),
+    getSanityBanners(),
   ]);
 
-  return <StoreClient initialProducts={products} categories={categories} />;
+  return <StoreClient initialProducts={products} categories={categories} banners={banners} />;
 }

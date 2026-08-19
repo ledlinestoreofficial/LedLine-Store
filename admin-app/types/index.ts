@@ -130,6 +130,22 @@ export interface CouponCode {
   usageCount: number;
 }
 
+export interface BannerSlide {
+  id: string;
+  headlineAr: string;
+  subheadlineAr?: string;
+  ctaPrimaryAr: string;
+  ctaPrimaryLink?: string;
+  ctaSecondaryAr?: string;
+  ctaSecondaryLink?: string;
+  category?: string;
+  tagAr?: string;
+  badgeAr?: string;
+  image: string;
+  order?: number;
+  active?: boolean;
+}
+
 export interface DashboardStats {
   totalRevenue: number;
   totalOrders: number;

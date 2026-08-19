@@ -15,10 +15,12 @@ import {
   Warehouse,
   Settings,
   LayoutDashboard,
+  Megaphone,
 } from 'lucide-react';
 
 const RAW_MOBILE_NAV = [
   { path: '', label: 'نظرة عامة', icon: LayoutDashboard },
+  { path: '/banners', label: 'البنرات الإعلانية', icon: Megaphone },
   { path: '/products', label: 'المنتجات', icon: Package },
   { path: '/orders', label: 'الطلبات', icon: ShoppingBag },
   { path: '/categories', label: 'الأقسام', icon: Layers },
@@ -40,6 +42,8 @@ export function AdminHeader() {
       case '':
       case '/':
         return 'لوحة المتابعة التنفيذية';
+      case '/banners':
+        return 'إدارة البنرات الإعلانية';
       case '/products':
         return 'إدارة المنتجات والكتالوج';
       case '/orders':

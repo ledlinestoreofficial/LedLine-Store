@@ -1,3 +1,19 @@
+export interface BannerSlide {
+  id: string;
+  headlineAr: string;
+  subheadlineAr?: string;
+  ctaPrimaryAr: string;
+  ctaPrimaryLink?: string;
+  ctaSecondaryAr?: string;
+  ctaSecondaryLink?: string;
+  category?: CategoryId;
+  tagAr?: string;
+  badgeAr?: string;
+  image: string;
+  order?: number;
+  active?: boolean;
+}
+
 export type CategoryId = 
   | 'all'
   | 'led-cob'

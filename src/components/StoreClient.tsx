@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Product, CartItem, CategoryId, FilterState, CategoryData } from '../types';
+import { Product, CartItem, CategoryId, FilterState, CategoryData, BannerSlide } from '../types';
 import { Header } from './Header';
 import { HeroCampaign } from './HeroCampaign';
 import { CategoryRail } from './CategoryRail';
@@ -11,17 +11,27 @@ import { WoodAndLedCalculator } from './WoodAndLedCalculator';
 import { CartDrawer } from './CartDrawer';
 import { CheckoutModal } from './CheckoutModal';
 import { WishlistModal } from './WishlistModal';
-import { FilterSidebar } from './FilterSidebar';
 import { Footer } from './Footer';
 import Link from 'next/link';
-import { Sparkles, Grid3X3, Grid2X2, ArrowUpDown, LayoutDashboard, ArrowLeft } from 'lucide-react';
+import {
+  Sparkles,
+  Grid3X3,
+  Grid2X2,
+  ArrowUpDown,
+  LayoutDashboard,
+  ArrowLeft,
+  Layers,
+  Tag,
+  RotateCcw,
+} from 'lucide-react';
 
 interface StoreClientProps {
   initialProducts: Product[];
   categories?: CategoryData[];
+  banners?: BannerSlide[];
 }
 
-export function StoreClient({ initialProducts = [], categories = [] }: StoreClientProps) {
+export function StoreClient({ initialProducts = [], categories = [], banners = [] }: StoreClientProps) {
   // Search & Filters State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<CategoryId>('all');
@@ -43,15 +53,15 @@ export function StoreClient({ initialProducts = [], categories = [] }: StoreClie
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [activeProductModal, setActiveProductModal] = useState<Product | null>(null);
 
-  // Layout View Mode (standard grid or dense 4-col grid)
+  // Layout View Mode (standard 3/4 col grid or dense grid)
   const [isCompactGrid, setIsCompactGrid] = useState(false);
 
-  // Cart & Wishlist State (Clean initial states without demo data)
+  // Cart & Wishlist State
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
 
-  // Coupons State (Clean initial state without pre-applied coupon)
+  // Coupons State
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
 
   // Load user saved session from localStorage on client mount
@@ -88,7 +98,7 @@ export function StoreClient({ initialProducts = [], categories = [] }: StoreClie
     }
   }, [wishlist, isHydrated]);
 
-  // Update filter category when selected from Header or CategoryRail
+  // Update filter category when selected from Header, CategoryRail, or Filter Bar
   const handleSelectCategory = (catId: CategoryId) => {
     setSelectedCategory(catId);
     setFilters((prev) => ({ ...prev, category: catId }));
@@ -118,25 +128,29 @@ export function StoreClient({ initialProducts = [], categories = [] }: StoreClie
         ...prev,
         {
           ...itemData,
-          id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`
+          id: `${itemData.productId}-${Date.now()}`
         }
       ];
     });
     setIsCartOpen(true);
   };
 
-  const handleUpdateCartQuantity = (id: string, qty: number) => {
-    if (qty <= 0) {
-      handleRemoveCartItem(id);
-      return;
-    }
+  const handleUpdateCartQuantity = (cartItemId: string, delta: number) => {
     setCartItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, quantity: qty } : item))
+      prev
+        .map((item) => {
+          if (item.id === cartItemId) {
+            const newQty = item.quantity + delta;
+            return newQty > 0 ? { ...item, quantity: newQty } : null;
+          }
+          return item;
+        })
+        .filter(Boolean) as CartItem[]
     );
   };
 
-  const handleRemoveCartItem = (id: string) => {
-    setCartItems((prev) => prev.filter((item) => item.id !== id));
+  const handleRemoveCartItem = (cartItemId: string) => {
+    setCartItems((prev) => prev.filter((item) => item.id !== cartItemId));
   };
 
   // Wishlist Handlers
@@ -145,8 +159,9 @@ export function StoreClient({ initialProducts = [], categories = [] }: StoreClie
       const exists = prev.some((p) => p.id === product.id);
       if (exists) {
         return prev.filter((p) => p.id !== product.id);
+      } else {
+        return [...prev, product];
       }
-      return [...prev, product];
     });
   };
 
@@ -154,11 +169,25 @@ export function StoreClient({ initialProducts = [], categories = [] }: StoreClie
     return wishlist.some((p) => p.id === productId);
   };
 
-  // Coupon Engine
-  const handleApplyCoupon = (code: string) => {
-    const upper = code.trim().toUpperCase();
-    if (upper === 'LED10' || upper === 'WELCOME' || upper === 'PROMO15') {
-      setAppliedCoupon(upper);
+  // Coupon Calculations
+  const subtotal = useMemo(() => {
+    return cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  }, [cartItems]);
+
+  const discountAmount = useMemo(() => {
+    if (!appliedCoupon) return 0;
+    if (appliedCoupon === 'LED10') return subtotal * 0.1;
+    if (appliedCoupon === 'ARCH20') return subtotal * 0.2;
+    return 0;
+  }, [appliedCoupon, subtotal]);
+
+  const shippingFee = subtotal > 300 || subtotal === 0 ? 0 : 35;
+  const finalTotal = Math.max(0, subtotal - discountAmount + shippingFee);
+
+  const handleApplyCoupon = (code: string): boolean => {
+    const clean = code.trim().toUpperCase();
+    if (clean === 'LED10' || clean === 'ARCH20') {
+      setAppliedCoupon(clean);
       return true;
     }
     return false;
@@ -168,79 +197,109 @@ export function StoreClient({ initialProducts = [], categories = [] }: StoreClie
     setAppliedCoupon(null);
   };
 
-  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const discountAmount = appliedCoupon
-    ? appliedCoupon === 'WELCOME' || appliedCoupon === 'PROMO15'
-      ? Math.round(subtotal * 0.15)
-      : Math.round(subtotal * 0.1)
-    : 0;
-  const shippingFee = subtotal >= 350 || cartItems.length === 0 ? 0 : 35;
-  const finalTotal = Math.max(0, subtotal - discountAmount + shippingFee);
+  // Synchronize searchQuery with filters
+  useEffect(() => {
+    setFilters((prev) => ({ ...prev, searchQuery }));
+  }, [searchQuery]);
 
-  // Filter & Sort Logic (Using Server-supplied initial products)
+  // Main Filter & Sort Logic
   const filteredProducts = useMemo(() => {
-    const sourceProducts = initialProducts;
+    let result = [...initialProducts];
 
-    return sourceProducts.filter((p) => {
-      // Category filter
-      if (filters.category !== 'all' && p.category !== filters.category) {
-        return false;
-      }
+    // 1. Category Filter
+    if (filters.category && filters.category !== 'all') {
+      result = result.filter((p) => p.category === filters.category);
+    }
 
-      // Search Query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchesName = p.name?.toLowerCase().includes(q) || p.nameEn?.toLowerCase().includes(q);
-        const matchesDesc = p.description?.toLowerCase().includes(q) || p.shortDescription?.toLowerCase().includes(q);
-        const matchesSku = p.sku?.toLowerCase().includes(q);
-        if (!matchesName && !matchesDesc && !matchesSku) return false;
-      }
+    // 2. Search Query Filter
+    if (filters.searchQuery.trim()) {
+      const q = filters.searchQuery.toLowerCase().trim();
+      result = result.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.nameEn.toLowerCase().includes(q) ||
+          p.sku.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q) ||
+          p.shortDescription.toLowerCase().includes(q) ||
+          p.categoryName.toLowerCase().includes(q)
+      );
+    }
 
-      // Price filter
-      if (p.price > filters.priceRange[1]) {
-        return false;
-      }
+    // 3. Price Range Filter
+    result = result.filter(
+      (p) => p.price >= filters.priceRange[0] && p.price <= filters.priceRange[1]
+    );
 
-      // In stock
-      if (filters.onlyInStock && !p.inStock) {
-        return false;
-      }
+    // 4. Color Temperature Filter
+    if (filters.colorTemp.length > 0) {
+      result = result.filter((p) => {
+        if (!p.colorOptions) return false;
+        return p.colorOptions.some((opt) => filters.colorTemp.includes(opt.name));
+      });
+    }
 
-      // On sale
-      if (filters.onlySale && !p.isSale) {
-        return false;
-      }
+    // 5. In Stock Filter
+    if (filters.onlyInStock) {
+      result = result.filter((p) => p.inStock === true);
+    }
 
-      // Color temperature
-      if (filters.colorTemp.length > 0) {
-        const hasMatchingTemp = p.colorOptions?.some((c) =>
-          filters.colorTemp.includes(c.temp || '')
-        );
-        if (!hasMatchingTemp) return false;
-      }
+    // 6. On Sale Filter
+    if (filters.onlySale) {
+      result = result.filter((p) => p.isSale === true || (p.originalPrice && p.originalPrice > p.price));
+    }
 
-      // Wood finishes
-      if (filters.woodFinishes.length > 0) {
-        const hasMatchingFinish = p.finishOptions?.some((f) =>
-          filters.woodFinishes.some((wf) => f.name.includes(wf))
-        );
-        if (!hasMatchingFinish) return false;
-      }
+    // 7. Sorting
+    switch (filters.sortBy) {
+      case 'price-asc':
+        result.sort((a, b) => a.price - b.price);
+        break;
+      case 'price-desc':
+        result.sort((a, b) => b.price - a.price);
+        break;
+      case 'rating':
+        result.sort((a, b) => b.rating - a.rating);
+        break;
+      case 'newest':
+        result.sort((a, b) => b.id.localeCompare(a.id));
+        break;
+      case 'featured':
+      default:
+        // Default curated sort
+        result.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+        break;
+    }
 
-      return true;
-    }).sort((a, b) => {
-      if (filters.sortBy === 'price-asc') return a.price - b.price;
-      if (filters.sortBy === 'price-desc') return b.price - a.price;
-      if (filters.sortBy === 'rating') return b.rating - a.rating;
-      if (filters.sortBy === 'newest') return (b.reviewsCount || 0) - (a.reviewsCount || 0);
-      return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
+    return result;
+  }, [initialProducts, filters]);
+
+  const hasAnyFilterActive = useMemo(() => {
+    return (
+      filters.category !== 'all' ||
+      filters.onlySale ||
+      Boolean(searchQuery.trim())
+    );
+  }, [filters.category, filters.onlySale, searchQuery]);
+
+  const handleResetAllFilters = () => {
+    setSearchQuery('');
+    setSelectedCategory('all');
+    setFilters({
+      category: 'all',
+      searchQuery: '',
+      priceRange: [0, 600],
+      colorTemp: [],
+      woodFinishes: [],
+      onlyInStock: false,
+      onlySale: false,
+      sortBy: 'featured'
     });
-  }, [filters, searchQuery, initialProducts]);
+  };
 
   return (
     <div className="min-h-screen bg-white text-[#111111] flex flex-col selection:bg-[#111111] selection:text-white">
-      {/* 1. Retail Header */}
+      {/* 1. Retail Header (Dynamic categories from Sanity) */}
       <Header
+        categories={categories}
         cartCount={cartItems.reduce((acc, item) => acc + item.quantity, 0)}
         wishlistCount={wishlist.length}
         onOpenCart={() => setIsCartOpen(true)}
@@ -253,22 +312,24 @@ export function StoreClient({ initialProducts = [], categories = [] }: StoreClie
       />
 
       <main className="flex-1">
-        {/* 2. Hero Editorial Slider */}
+        {/* 2. Hero Editorial Slider (Controlled via Sanity / Dashboard with balanced dimensions) */}
         <HeroCampaign
+          banners={banners}
           onSelectCategory={handleSelectCategory}
         />
 
-        {/* 3. Horizontal Category Rail */}
+        {/* 3. Horizontal Category Rail (Synced with Sanity Categories) */}
         <CategoryRail
           categories={categories}
           selectedCategory={selectedCategory}
           onSelectCategory={handleSelectCategory}
         />
 
-        {/* 4. Main Catalog & Store Products Grid */}
+        {/* 4. Main Catalog & Store Products */}
         <section id="product-catalog" className="py-12 sm:py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Catalog Top Controls Bar */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-[#E5E5E5]">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-[#E5E5E5]">
+            {/* Title & Count */}
             <div>
               <h2 className="text-2xl sm:text-3xl font-black text-[#111111] tracking-tight font-display flex items-center gap-2">
                 <span>
@@ -287,15 +348,39 @@ export function StoreClient({ initialProducts = [], categories = [] }: StoreClie
               )}
             </div>
 
-            {/* Sorting & Grid View Switchers */}
-            <div className="flex items-center gap-3">
-              {/* Sort Selector */}
-              <div className="flex items-center bg-[#F5F5F5] rounded-full px-3 py-1.5 border border-[#E5E5E5] text-xs font-bold">
-                <ArrowUpDown className="w-3.5 h-3.5 text-[#757575] ml-1.5" />
+            {/* 
+              Side-by-side matching filter & sort controls
+              (تصفية المنتجات بجانب فلتر المميزة والأكثر طلباً وبنفس تصميمه)
+            */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              {/* 1. Category Filter Pill Dropdown */}
+              <div className="flex items-center bg-[#F5F5F5] hover:bg-[#EAEAEA] rounded-full px-3.5 py-2 border border-[#E5E5E5] text-xs font-bold transition-all focus-within:border-[#111111]">
+                <Layers className="w-3.5 h-3.5 text-[#757575] ml-1.5 shrink-0" />
+                <select
+                  value={filters.category}
+                  onChange={(e) => handleSelectCategory(e.target.value as any)}
+                  className="bg-transparent outline-none text-[#111111] cursor-pointer"
+                  aria-label="تصفية حسب القسم"
+                >
+                  <option value="all">كافة الأقسام المعمارية</option>
+                  {categories
+                    .filter((c) => c.id !== 'all')
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {/* 2. Sort Selector Pill */}
+              <div className="flex items-center bg-[#F5F5F5] hover:bg-[#EAEAEA] rounded-full px-3.5 py-2 border border-[#E5E5E5] text-xs font-bold transition-all focus-within:border-[#111111]">
+                <ArrowUpDown className="w-3.5 h-3.5 text-[#757575] ml-1.5 shrink-0" />
                 <select
                   value={filters.sortBy}
                   onChange={(e) => setFilters((prev) => ({ ...prev, sortBy: e.target.value as any }))}
                   className="bg-transparent outline-none text-[#111111] cursor-pointer"
+                  aria-label="ترتيب المنتجات"
                 >
                   <option value="featured">المميزة والأكثر طلباً</option>
                   <option value="newest">الأحدث تقييماً</option>
@@ -305,23 +390,55 @@ export function StoreClient({ initialProducts = [], categories = [] }: StoreClie
                 </select>
               </div>
 
-              {/* Grid density toggle */}
-              <div className="hidden sm:flex items-center bg-[#F5F5F5] rounded-full p-1 border border-[#E5E5E5]">
+              {/* 3. Sale Filter Pill (العروض والخصومات) */}
+              <button
+                onClick={() => setFilters((prev) => ({ ...prev, onlySale: !prev.onlySale }))}
+                className={`flex items-center rounded-full px-3.5 py-2 border text-xs font-bold transition-all cursor-pointer ${
+                  filters.onlySale
+                    ? 'bg-[#D33918] text-white border-[#D33918] shadow-xs'
+                    : 'bg-[#F5F5F5] text-[#111111] border-[#E5E5E5] hover:bg-[#EAEAEA] hover:border-[#111111]'
+                }`}
+                title="تصفية العروض والتخفيضات"
+              >
+                <Tag
+                  className={`w-3.5 h-3.5 ml-1.5 shrink-0 ${
+                    filters.onlySale ? 'text-white' : 'text-[#757575]'
+                  }`}
+                />
+                <span>العروض والتخفيضات</span>
+              </button>
+
+              {/* 4. Reset Filters button */}
+              {hasAnyFilterActive && (
+                <button
+                  onClick={handleResetAllFilters}
+                  className="text-xs font-bold text-[#757575] hover:text-[#D33918] flex items-center gap-1 transition-colors px-2 py-1 cursor-pointer"
+                  title="إعادة ضبط كافة الفلاتر"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>مسح الفلاتر</span>
+                </button>
+              )}
+
+              {/* Grid density switcher */}
+              <div className="hidden xl:flex items-center bg-[#F5F5F5] rounded-full p-1 border border-[#E5E5E5] mr-auto">
                 <button
                   onClick={() => setIsCompactGrid(false)}
-                  className={`p-1.5 rounded-full transition-colors ${
+                  className={`p-1.5 rounded-full transition-colors cursor-pointer ${
                     !isCompactGrid ? 'bg-white shadow-xs text-[#111111]' : 'text-[#757575]'
                   }`}
                   aria-label="عرض قياسي"
+                  title="عرض 4 أعمدة"
                 >
                   <Grid2X2 className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setIsCompactGrid(true)}
-                  className={`p-1.5 rounded-full transition-colors ${
+                  className={`p-1.5 rounded-full transition-colors cursor-pointer ${
                     isCompactGrid ? 'bg-white shadow-xs text-[#111111]' : 'text-[#757575]'
                   }`}
                   aria-label="عرض مدمج"
+                  title="عرض مدمج"
                 >
                   <Grid3X3 className="w-4 h-4" />
                 </button>
@@ -329,82 +446,44 @@ export function StoreClient({ initialProducts = [], categories = [] }: StoreClie
             </div>
           </div>
 
-          {/* Grid Layout with Sidebar */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-8">
-            {/* Filter Sidebar (Desktop) */}
-            <div className="hidden lg:block lg:col-span-3">
-              <div className="sticky top-28">
-                <FilterSidebar
-                  filters={filters}
-                  onFilterChange={(newF) => setFilters((prev) => ({ ...prev, ...newF }))}
-                  onResetFilters={() =>
-                    setFilters({
-                      category: 'all',
-                      searchQuery: '',
-                      priceRange: [0, 600],
-                      colorTemp: [],
-                      woodFinishes: [],
-                      onlyInStock: false,
-                      onlySale: false,
-                      sortBy: 'featured'
-                    })
-                  }
-                  totalMatches={filteredProducts.length}
-                />
-              </div>
-            </div>
-
-            {/* Products Grid */}
-            <div className="lg:col-span-9">
-              {filteredProducts.length === 0 ? (
-                <div className="bg-[#F5F5F5] rounded-3xl p-12 text-center space-y-4 border border-[#E5E5E5]">
-                  <Sparkles className="w-12 h-12 stroke-1 text-[#757575] mx-auto" />
-                  <h3 className="text-xl font-bold text-[#111111]">
-                    لم نتمكن من العثور على منتجات مطابقة
-                  </h3>
-                  <p className="text-xs text-[#757575] max-w-sm mx-auto">
-                    جرب تعديل خيارات التصفية أو تغيير نطاق السعر للوصول إلى خيارات أكثر.
-                  </p>
-                  <button
-                    onClick={() => {
-                      setSearchQuery('');
-                      setFilters({
-                        category: 'all',
-                        searchQuery: '',
-                        priceRange: [0, 600],
-                        colorTemp: [],
-                        woodFinishes: [],
-                        onlyInStock: false,
-                        onlySale: false,
-                        sortBy: 'featured'
-                      });
-                    }}
-                    className="bg-[#111111] text-white px-6 py-2.5 rounded-full font-bold text-xs hover:bg-[#2A2A2A] transition-colors"
-                  >
-                    إعادة ضبط كافة الفلاتر
-                  </button>
-                </div>
-              ) : (
-                <div
-                  className={`grid gap-4 sm:gap-6 ${
-                    isCompactGrid
-                      ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4'
-                      : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-                  }`}
+          {/* Full Width Products Grid */}
+          <div className="pt-8">
+            {filteredProducts.length === 0 ? (
+              <div className="bg-[#F5F5F5] rounded-3xl p-12 text-center space-y-4 border border-[#E5E5E5]">
+                <Sparkles className="w-12 h-12 stroke-1 text-[#757575] mx-auto" />
+                <h3 className="text-xl font-bold text-[#111111]">
+                  لم نتمكن من العثور على منتجات مطابقة
+                </h3>
+                <p className="text-xs text-[#757575] max-w-sm mx-auto">
+                  جرب تعديل خيارات التصفية أو تغيير نطاق السعر للوصول إلى خيارات أكثر.
+                </p>
+                <button
+                  onClick={handleResetAllFilters}
+                  className="bg-[#111111] text-white px-6 py-2.5 rounded-full font-bold text-xs hover:bg-[#2A2A2A] transition-colors cursor-pointer"
                 >
-                  {filteredProducts.map((product) => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      isWishlisted={isWishlisted(product.id)}
-                      onToggleWishlist={handleToggleWishlist}
-                      onQuickView={(p) => setActiveProductModal(p)}
-                      onAddToCart={handleAddToCart}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+                  إعادة ضبط كافة الفلاتر
+                </button>
+              </div>
+            ) : (
+              <div
+                className={`grid gap-5 sm:gap-6 ${
+                  isCompactGrid
+                    ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+                    : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+                }`}
+              >
+                {filteredProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    isWishlisted={isWishlisted(product.id)}
+                    onToggleWishlist={handleToggleWishlist}
+                    onQuickView={(p) => setActiveProductModal(p)}
+                    onAddToCart={handleAddToCart}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </section>
       </main>
@@ -466,7 +545,7 @@ export function StoreClient({ initialProducts = [], categories = [] }: StoreClie
         onAddToCart={handleAddToCart}
       />
 
-      {/* Floating Temporary Admin Dashboard Test Button */}
+      {/* Floating Temporary Admin Dashboard Button */}
       <div className="fixed bottom-6 left-6 z-50">
         <Link
           href="/admin"
@@ -487,7 +566,7 @@ export function StoreClient({ initialProducts = [], categories = [] }: StoreClie
               </span>
             </div>
             <p className="text-[10px] text-gray-400 font-mono">
-              إدارة المنتجات والطلبات
+              إدارة المنتجات والبنرات
             </p>
           </div>
 

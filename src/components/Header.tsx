@@ -8,11 +8,12 @@ import {
   Menu,
   X,
 } from 'lucide-react';
-import { CategoryId } from '../types';
-import { CATEGORIES } from '../data/products';
+import { CategoryId, CategoryData } from '../types';
+import { CATEGORIES as DEFAULT_CATEGORIES } from '../data/products';
 import { BRAND_CONFIG } from '../data/brand';
 
 interface HeaderProps {
+  categories?: CategoryData[];
   cartCount: number;
   wishlistCount: number;
   onOpenCart: () => void;
@@ -25,6 +26,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
+  categories,
   cartCount,
   wishlistCount,
   onOpenCart,
@@ -37,15 +39,23 @@ export const Header: React.FC<HeaderProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpenMobile, setIsSearchOpenMobile] = useState(false);
 
-  // Concise Arabic navigation labels
-  const navItems: { id: CategoryId; labelAr: string }[] = [
-    { id: 'all', labelAr: 'الكل' },
-    { id: 'led-cob', labelAr: 'أشرطة الليد COB' },
-    { id: 'aluminum-profiles', labelAr: 'البروفايلات' },
-    { id: 'wood-panels', labelAr: 'بديل الخشب والسلات' },
-    { id: 'magnetic-track', labelAr: 'المسار المغناطيسي' },
-    { id: 'pendant-modern', labelAr: 'الإنارة المعلقة' },
-  ];
+  const activeCategories = (categories && categories.length > 0) ? categories : DEFAULT_CATEGORIES;
+
+  // Build nav items dynamically from Sanity categories
+  // Ensure "all" is available as the first option
+  const hasAll = activeCategories.some((c) => c.id === 'all');
+  const dynamicNavItems: { id: CategoryId; labelAr: string }[] = [];
+
+  if (!hasAll) {
+    dynamicNavItems.push({ id: 'all', labelAr: 'الكل' });
+  }
+
+  activeCategories.forEach((cat) => {
+    dynamicNavItems.push({
+      id: cat.id,
+      labelAr: cat.id === 'all' ? 'الكل' : cat.name,
+    });
+  });
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-[#E5E5E5] transition-all">
@@ -57,7 +67,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden p-2 -mr-2 text-[#111111] hover:bg-[#F5F5F5] rounded-full transition-colors"
+              className="lg:hidden p-2 -mr-2 text-[#111111] hover:bg-[#F5F5F5] rounded-full transition-colors cursor-pointer"
               aria-label="القائمة الرئيسية"
             >
               {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -68,6 +78,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => onSelectCategory('all')}
               className="flex items-center gap-2.5 cursor-pointer group select-none py-1 whitespace-nowrap"
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={BRAND_CONFIG.headerIcon}
                 alt="LED LINE Logo"
@@ -82,15 +93,15 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Center: Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
-            {navItems.map((item) => {
+          {/* Center: Dynamic Desktop Navigation Links from Sanity */}
+          <nav className="hidden lg:flex items-center gap-1 xl:gap-1.5 overflow-x-auto no-scrollbar py-1">
+            {dynamicNavItems.map((item) => {
               const isActive = selectedCategory === item.id;
               return (
                 <button
                   key={item.id}
                   onClick={() => onSelectCategory(item.id)}
-                  className={`relative px-3.5 py-2 rounded-full text-xs font-bold transition-all duration-200 whitespace-nowrap ${
+                  className={`relative px-3.5 py-2 rounded-full text-xs font-bold transition-all duration-200 whitespace-nowrap cursor-pointer ${
                     isActive
                       ? 'bg-[#111111] text-white shadow-xs'
                       : 'text-[#111111] hover:bg-[#F5F5F5] hover:text-black'
@@ -119,7 +130,7 @@ export const Header: React.FC<HeaderProps> = ({
                 {searchQuery && (
                   <button
                     onClick={() => onSearchChange('')}
-                    className="text-[#757575] hover:text-[#111111] p-0.5"
+                    className="text-[#757575] hover:text-[#111111] p-0.5 cursor-pointer"
                     aria-label="مسح البحث"
                   >
                     <X className="w-3 h-3" />
@@ -131,7 +142,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Mobile Search Icon */}
             <button
               onClick={() => setIsSearchOpenMobile(!isSearchOpenMobile)}
-              className="sm:hidden p-2 text-[#111111] hover:bg-[#F5F5F5] rounded-full transition-colors"
+              className="sm:hidden p-2 text-[#111111] hover:bg-[#F5F5F5] rounded-full transition-colors cursor-pointer"
               aria-label="البحث"
             >
               <Search className="w-5 h-5" />
@@ -140,7 +151,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Wishlist Button */}
             <button
               onClick={onOpenWishlist}
-              className="relative p-2.5 text-[#111111] hover:bg-[#F5F5F5] rounded-full transition-colors"
+              className="relative p-2.5 text-[#111111] hover:bg-[#F5F5F5] rounded-full transition-colors cursor-pointer"
               aria-label="المفضلة"
               title="المفضلة"
             >
@@ -155,7 +166,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Cart Button */}
             <button
               onClick={onOpenCart}
-              className="flex items-center gap-2 bg-[#111111] hover:bg-[#2A2A2A] text-white px-3.5 sm:px-4 py-2 rounded-full font-bold text-xs sm:text-sm transition-all shadow-sm active:scale-95"
+              className="flex items-center gap-2 bg-[#111111] hover:bg-[#2A2A2A] text-white px-3.5 sm:px-4 py-2 rounded-full font-bold text-xs sm:text-sm transition-all shadow-sm active:scale-95 cursor-pointer"
               aria-label="حقيبة التسوق"
             >
               <ShoppingBag className="w-4 h-4" />
@@ -182,7 +193,7 @@ export const Header: React.FC<HeaderProps> = ({
                 className="bg-transparent border-none outline-none text-xs w-full px-2 text-[#111111]"
               />
               {searchQuery && (
-                <button onClick={() => onSearchChange('')} className="text-[#757575]">
+                <button onClick={() => onSearchChange('')} className="text-[#757575] cursor-pointer">
                   <X className="w-4 h-4" />
                 </button>
               )}
@@ -191,22 +202,22 @@ export const Header: React.FC<HeaderProps> = ({
         )}
       </div>
 
-      {/* Mobile Navigation Drawer */}
+      {/* Mobile Navigation Drawer (Dynamic Categories from Sanity) */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden fixed inset-x-0 top-[72px] sm:top-[80px] bottom-0 bg-white/98 backdrop-blur-lg z-50 border-t border-[#E5E5E5] overflow-y-auto p-5 space-y-6">
+        <div className="lg:hidden fixed inset-x-0 top-[72px] sm:top-[80px] bottom-0 bg-white/98 backdrop-blur-lg z-50 border-t border-[#E5E5E5] overflow-y-auto p-5 space-y-6 animate-in fade-in slide-in-from-top-2 duration-150">
           {/* Category List */}
           <div className="space-y-1.5">
             <p className="text-[11px] font-bold uppercase tracking-wider text-[#757575] px-2 mb-2">
               أقسام المنتجات المعمارية
             </p>
-            {CATEGORIES.map((cat) => (
+            {activeCategories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => {
                   onSelectCategory(cat.id);
                   setIsMobileMenuOpen(false);
                 }}
-                className={`w-full text-right flex items-center justify-between px-4 py-3 rounded-2xl font-bold text-xs transition-colors ${
+                className={`w-full text-right flex items-center justify-between px-4 py-3 rounded-2xl font-bold text-xs transition-colors cursor-pointer ${
                   selectedCategory === cat.id
                     ? 'bg-[#111111] text-white'
                     : 'text-[#111111] bg-[#F5F5F5] hover:bg-[#EAEAEA]'
@@ -234,4 +245,3 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
-

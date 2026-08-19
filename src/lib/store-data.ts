@@ -1,4 +1,4 @@
-import { Product, CategoryData, OrderRecord } from '../types';
+import { Product, CategoryData, OrderRecord, BannerSlide } from '../types';
 import { PRODUCTS, CATEGORIES } from '../data/products';
 
 export interface CouponCode {
@@ -13,6 +13,54 @@ export interface CouponCode {
   usageCount: number;
 }
 
+export const INITIAL_BANNERS: BannerSlide[] = [
+  {
+    id: 'hero-1',
+    tagAr: 'تشكيلة معمارية 2026',
+    headlineAr: 'إضاءة معمارية نقية بلا نقاط.',
+    subheadlineAr: 'تقنية COB فائقة الكثافة مع بروفايلات ألمنيوم مخفية تندمج بسلاسة في الأسقف والجدران الديكورية.',
+    ctaPrimaryAr: 'تسوق أشرطة COB',
+    ctaPrimaryLink: 'led-cob',
+    ctaSecondaryAr: 'استكشف كافة المقاسات',
+    ctaSecondaryLink: 'aluminum-profiles',
+    category: 'led-cob',
+    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1600&auto=format&fit=crop',
+    badgeAr: 'ضمان ذهبي 5 سنوات',
+    order: 1,
+    active: true,
+  },
+  {
+    id: 'hero-2',
+    tagAr: 'تصاميم ديكورية متميزة',
+    headlineAr: 'ألواح بديل الخشب والسلات الصوتية.',
+    subheadlineAr: 'قشرة خشب البلوط والجوز الطبيعي المدمجة مع لباد عازل للصدى وتجاويف مخصصة للإنارة المخفية.',
+    ctaPrimaryAr: 'استكشف ألواح الخشب',
+    ctaPrimaryLink: 'wood-panels',
+    ctaSecondaryAr: 'إلهام المساحات والتركيب',
+    ctaSecondaryLink: 'wood-panels',
+    category: 'wood-panels',
+    image: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=1600&auto=format&fit=crop',
+    badgeAr: 'عازل للصوت ومقاوم للرطوبة',
+    order: 2,
+    active: true,
+  },
+  {
+    id: 'hero-3',
+    tagAr: 'أنظمة الإنارة الحديثة',
+    headlineAr: 'الإنارة المغناطيسية الذكية.',
+    subheadlineAr: 'نظام الجهد المنخفض الآمن، ركّب وحرّك وحدات السبوت لايت والإنارة الخطية بلمسة يد.',
+    ctaPrimaryAr: 'اكتشف الأنظمة المغناطيسية',
+    ctaPrimaryLink: 'magnetic-track',
+    ctaSecondaryAr: 'استكشف التشكيلة',
+    ctaSecondaryLink: 'magnetic-track',
+    category: 'magnetic-track',
+    image: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?q=80&w=1600&auto=format&fit=crop',
+    badgeAr: 'جهد منخفض آمن 48V',
+    order: 3,
+    active: true,
+  },
+];
+
 // Clean Real Store State (Zero Dummy Data)
 export const INITIAL_ORDERS: OrderRecord[] = [];
 export const INITIAL_COUPONS: CouponCode[] = [];
@@ -23,17 +71,29 @@ class StoreDataRepository {
   private categories: CategoryData[] = [...CATEGORIES];
   private orders: OrderRecord[] = [...INITIAL_ORDERS];
   private coupons: CouponCode[] = [...INITIAL_COUPONS];
+  private banners: BannerSlide[] = [...INITIAL_BANNERS];
+  private deletedProductIds: Set<string> = new Set();
+  private deletedBannerIds: Set<string> = new Set();
+  private deletedCategoryIds: Set<string> = new Set();
+  private deletedCouponIds: Set<string> = new Set();
 
   // Products
   getProducts(): Product[] {
-    return this.products;
+    return this.products.filter((p) => !this.deletedProductIds.has(p.id) && !this.deletedProductIds.has(p.sku));
   }
 
   getProductById(id: string): Product | undefined {
-    return this.products.find((p) => p.id === id || p.sku === id);
+    if (this.deletedProductIds.has(id)) return undefined;
+    return this.products.find((p) => (p.id === id || p.sku === id) && !this.deletedProductIds.has(p.id) && !this.deletedProductIds.has(p.sku));
   }
 
   saveProduct(product: Partial<Product>): Product {
+    if (product.id) {
+      this.deletedProductIds.delete(product.id);
+    }
+    if (product.sku) {
+      this.deletedProductIds.delete(product.sku);
+    }
     const isEdit = Boolean(product.id);
     const existingIndex = isEdit ? this.products.findIndex((p) => p.id === product.id) : -1;
 
@@ -79,8 +139,9 @@ class StoreDataRepository {
   }
 
   deleteProduct(id: string): boolean {
+    this.deletedProductIds.add(id);
     const prevLen = this.products.length;
-    this.products = this.products.filter((p) => p.id !== id);
+    this.products = this.products.filter((p) => p.id !== id && p.sku !== id);
     return this.products.length < prevLen;
   }
 
@@ -94,11 +155,12 @@ class StoreDataRepository {
 
   // Categories
   getCategories(): CategoryData[] {
-    return this.categories;
+    return this.categories.filter((c) => !this.deletedCategoryIds.has(c.id));
   }
 
   saveCategory(category: Partial<CategoryData>): CategoryData {
     const id = category.id || `cat-${Date.now()}`;
+    this.deletedCategoryIds.delete(id);
     const idx = this.categories.findIndex((c) => c.id === id);
     const catItem: CategoryData = {
       id: (category.id as any) || id,
@@ -119,6 +181,7 @@ class StoreDataRepository {
   }
 
   deleteCategory(id: string): boolean {
+    this.deletedCategoryIds.add(id);
     const prev = this.categories.length;
     this.categories = this.categories.filter((c) => c.id !== id);
     return this.categories.length < prev;
@@ -149,11 +212,12 @@ class StoreDataRepository {
 
   // Coupons
   getCoupons(): CouponCode[] {
-    return this.coupons;
+    return this.coupons.filter((c) => !this.deletedCouponIds.has(c.id));
   }
 
   saveCoupon(coupon: Partial<CouponCode>): CouponCode {
     const id = coupon.id || `coup-${Date.now()}`;
+    this.deletedCouponIds.delete(id);
     const idx = this.coupons.findIndex((c) => c.id === id || c.code.toUpperCase() === coupon.code?.toUpperCase());
     const item: CouponCode = {
       id,
@@ -176,9 +240,51 @@ class StoreDataRepository {
   }
 
   deleteCoupon(id: string): boolean {
+    this.deletedCouponIds.add(id);
     const prev = this.coupons.length;
     this.coupons = this.coupons.filter((c) => c.id !== id);
     return this.coupons.length < prev;
+  }
+
+  // Banners
+  getBanners(): BannerSlide[] {
+    return this.banners.filter((b) => !this.deletedBannerIds.has(b.id));
+  }
+
+  saveBanner(banner: Partial<BannerSlide>): BannerSlide {
+    const id = banner.id || `banner-${Date.now()}`;
+    this.deletedBannerIds.delete(id);
+    const idx = this.banners.findIndex((b) => b.id === id);
+    const item: BannerSlide = {
+      id,
+      headlineAr: banner.headlineAr || 'عنوان البنر الإعلاني',
+      subheadlineAr: banner.subheadlineAr || '',
+      ctaPrimaryAr: banner.ctaPrimaryAr || 'تسوق الآن',
+      ctaPrimaryLink: banner.ctaPrimaryLink || 'led-cob',
+      ctaSecondaryAr: banner.ctaSecondaryAr || 'استكشف التشكيلة',
+      ctaSecondaryLink: banner.ctaSecondaryLink || 'all',
+      category: banner.category || 'led-cob',
+      tagAr: banner.tagAr || '',
+      badgeAr: banner.badgeAr || '',
+      image: banner.image || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1600&auto=format&fit=crop',
+      order: banner.order !== undefined ? Number(banner.order) : (idx >= 0 ? this.banners[idx].order : this.banners.length + 1),
+      active: banner.active !== false,
+    };
+
+    if (idx >= 0) {
+      this.banners[idx] = { ...this.banners[idx], ...item };
+      return this.banners[idx];
+    } else {
+      this.banners.push(item);
+      return item;
+    }
+  }
+
+  deleteBanner(id: string): boolean {
+    this.deletedBannerIds.add(id);
+    const prev = this.banners.length;
+    this.banners = this.banners.filter((b) => b.id !== id);
+    return this.banners.length < prev;
   }
 }
 
