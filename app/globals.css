@@ -23,6 +23,11 @@
     font-family: 'Cairo', 'Oswald', 'Plus Jakarta Sans', sans-serif;
     letter-spacing: -0.01em;
   }
+
+  /* Match all secondary numbers and mono badges with the platform typography */
+  .font-mono, code, kbd, samp, pre {
+    font-family: 'Cairo', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  }
 }
 
 /* Custom scrollbar */

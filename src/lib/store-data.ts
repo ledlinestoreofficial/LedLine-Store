@@ -1,4 +1,4 @@
-import { Product, CategoryData, OrderRecord, BannerSlide } from '../types';
+import { Product, CategoryData, OrderRecord, BannerSlide, BankAccount, CityDeliveryRate, PaymentDeliverySettings } from '../types';
 import { PRODUCTS, CATEGORIES } from '../data/products';
 
 export interface CouponCode {
@@ -12,6 +12,137 @@ export interface CouponCode {
   isActive: boolean;
   usageCount: number;
 }
+
+export const INITIAL_BANK_ACCOUNTS: BankAccount[] = [
+  {
+    id: 'bank-kuraimi',
+    name: 'بنك الكريمي للتمويل الأصغر الإسلامي',
+    type: 'bank',
+    accountName: 'متجر ليد لاين للإنارة المعمارية',
+    accountNumber: '3012456789',
+    instructions: 'يرجى كتابة رقم الطلب واسم العميل في خانة الغرض/الملاحظات، ورفع صورة الإشعار هنا.',
+    isActive: true,
+  },
+  {
+    id: 'wallet-qurooshi',
+    name: 'محفظة قروشي (Qurooshi)',
+    type: 'wallet',
+    accountName: 'ليد لاين لايتنج',
+    accountNumber: '771987654',
+    instructions: 'تحويل فوري عبر تطبيق قروشي، ثم إرفاق صورة السند/الإشعار.',
+    isActive: true,
+  },
+  {
+    id: 'wallet-bcash',
+    name: 'محفظة بي كاش (B-Cash)',
+    type: 'wallet',
+    accountName: 'LED LINE Store',
+    accountNumber: '780554433',
+    instructions: 'تحويل عبر تطبيق بي كاش مع إرفاق لقطة شاشة السند.',
+    isActive: true,
+  },
+  {
+    id: 'bank-bindowal',
+    name: 'بن دول باي (Bin Dowal Pay)',
+    type: 'wallet',
+    accountName: 'مؤسسة ليد لاين التجارية',
+    accountNumber: '770123456',
+    instructions: 'إيداع أو تحويل عبر بن دول باي برقم الحساب أعلاه.',
+    isActive: true,
+  },
+  {
+    id: 'bank-busairi',
+    name: 'شركة البسيري للصرافة والتحويلات',
+    type: 'bank',
+    accountName: 'متجر ليد لاين للإنارة',
+    accountNumber: '2580123',
+    instructions: 'إيداع نقدي عبر أي فرع للبسيري أو تحويل حساب لحساب.',
+    isActive: true,
+  },
+  {
+    id: 'bank-amjad',
+    name: 'بنك أمجاد للتمويل الأصغر',
+    type: 'bank',
+    accountName: 'متجر ليد لاين للإنارة المعمارية',
+    accountNumber: '4401298',
+    instructions: 'تحويل بنكي أو إيداع مباشر في حساب متجر ليد لاين.',
+    isActive: true,
+  },
+  {
+    id: 'bank-qutaibi',
+    name: 'بنك القطيبي الإسلامي',
+    type: 'bank',
+    accountName: 'ليد لاين لايتنج',
+    accountNumber: '1204456',
+    instructions: 'تحويل عبر تطبيق القطيبي لحظات أو إيداع شباك.',
+    isActive: true,
+  },
+  {
+    id: 'wallet-jeeb',
+    name: 'محفظة جيب (Jeeb Wallet)',
+    type: 'wallet',
+    accountName: 'متجر ليد لاين',
+    accountNumber: '774112233',
+    instructions: 'تحويل عبر تطبيق جيب وإرفاق إشعار الدفع.',
+    isActive: true,
+  },
+];
+
+export const INITIAL_DELIVERY_RATES: CityDeliveryRate[] = [
+  // حضرموت (الساحل والوادي) - الأسعار بالريال اليمني
+  { id: 'rate-mukalla', governorate: 'حضرموت', city: 'المكلا', fee: 2000, estimatedDays: 'خلال 24 ساعة', isActive: true },
+  { id: 'rate-shihr', governorate: 'حضرموت', city: 'الشحر', fee: 2500, estimatedDays: 'خلال 24-48 ساعة', isActive: true },
+  { id: 'rate-ghayl', governorate: 'حضرموت', city: 'غيل باوزير', fee: 2500, estimatedDays: 'خلال 24-48 ساعة', isActive: true },
+  { id: 'rate-seiyun', governorate: 'حضرموت', city: 'سيئون', fee: 3000, estimatedDays: 'خلال 1-2 يوم', isActive: true },
+  { id: 'rate-tarim', governorate: 'حضرموت', city: 'تريم', fee: 3000, estimatedDays: 'خلال 1-2 يوم', isActive: true },
+  { id: 'rate-shibam', governorate: 'حضرموت', city: 'شبام', fee: 3000, estimatedDays: 'خلال 1-2 يوم', isActive: true },
+  { id: 'rate-dis', governorate: 'حضرموت', city: 'الديس الشرقية', fee: 3000, estimatedDays: 'خلال 1-2 يوم', isActive: true },
+  { id: 'rate-qatn', governorate: 'حضرموت', city: 'القطن', fee: 3500, estimatedDays: 'خلال 2-3 أيام', isActive: true },
+  { id: 'rate-dawen', governorate: 'حضرموت', city: 'دوعن', fee: 3500, estimatedDays: 'خلال 2-3 أيام', isActive: true },
+  
+  // عدن
+  { id: 'rate-aden-mualla', governorate: 'عدن', city: 'المعلا', fee: 3500, estimatedDays: 'خلال 2-3 أيام', isActive: true },
+  { id: 'rate-aden-crater', governorate: 'عدن', city: 'كريتر (صيرة)', fee: 3500, estimatedDays: 'خلال 2-3 أيام', isActive: true },
+  { id: 'rate-aden-khormaksar', governorate: 'عدن', city: 'خور مكسر', fee: 3500, estimatedDays: 'خلال 2-3 أيام', isActive: true },
+  { id: 'rate-aden-mansoura', governorate: 'عدن', city: 'المنصورة', fee: 3500, estimatedDays: 'خلال 2-3 أيام', isActive: true },
+  { id: 'rate-aden-sheikh', governorate: 'عدن', city: 'الشيخ عثمان', fee: 3500, estimatedDays: 'خلال 2-3 أيام', isActive: true },
+  { id: 'rate-aden-inma', governorate: 'عدن', city: 'مدينة إنماء', fee: 3500, estimatedDays: 'خلال 2-3 أيام', isActive: true },
+  { id: 'rate-aden-buraiqeh', governorate: 'عدن', city: 'البريقة', fee: 4000, estimatedDays: 'خلال 2-3 أيام', isActive: true },
+
+  // صنعاء
+  { id: 'rate-sanaa-capital', governorate: 'صنعاء (الأمانة والمحافظة)', city: 'صنعاء (أمانة العاصمة)', fee: 3500, estimatedDays: 'خلال 2-3 أيام', isActive: true },
+  { id: 'rate-sanaa-hadda', governorate: 'صنعاء (الأمانة والمحافظة)', city: 'حدة', fee: 3500, estimatedDays: 'خلال 2-3 أيام', isActive: true },
+  { id: 'rate-sanaa-sabeen', governorate: 'صنعاء (الأمانة والمحافظة)', city: 'السبعين', fee: 3500, estimatedDays: 'خلال 2-3 أيام', isActive: true },
+  { id: 'rate-sanaa-tahreer', governorate: 'صنعاء (الأمانة والمحافظة)', city: 'التحرير', fee: 3500, estimatedDays: 'خلال 2-3 أيام', isActive: true },
+  { id: 'rate-sanaa-hasaba', governorate: 'صنعاء (الأمانة والمحافظة)', city: 'الحصبة', fee: 3500, estimatedDays: 'خلال 2-3 أيام', isActive: true },
+
+  // تعز
+  { id: 'rate-taiz-city', governorate: 'تعز', city: 'تعز (وسط المدينة)', fee: 4000, estimatedDays: 'خلال 2-4 أيام', isActive: true },
+  { id: 'rate-taiz-hawban', governorate: 'تعز', city: 'الحوبان', fee: 4000, estimatedDays: 'خلال 2-4 أيام', isActive: true },
+  { id: 'rate-taiz-turbah', governorate: 'تعز', city: 'التربة', fee: 4500, estimatedDays: 'خلال 3-5 أيام', isActive: true },
+
+  // المهرة
+  { id: 'rate-mahra-ghaydah', governorate: 'المهرة', city: 'الغيضة', fee: 4500, estimatedDays: 'خلال 2-4 أيام', isActive: true },
+  { id: 'rate-mahra-shahanna', governorate: 'المهرة', city: 'شحن', fee: 5000, estimatedDays: 'خلال 3-5 أيام', isActive: true },
+
+  // مأرب وشبوة
+  { id: 'rate-marib-city', governorate: 'مأرب', city: 'مأرب (المدينة)', fee: 4000, estimatedDays: 'خلال 2-4 أيام', isActive: true },
+  { id: 'rate-shabwa-ataq', governorate: 'شبوة', city: 'عتق', fee: 4000, estimatedDays: 'خلال 2-4 أيام', isActive: true },
+
+  // الحديدة وإب
+  { id: 'rate-hodeida-city', governorate: 'الحديدة', city: 'الحديدة (وسط المدينة)', fee: 4000, estimatedDays: 'خلال 3-5 أيام', isActive: true },
+  { id: 'rate-ibb-city', governorate: 'إب', city: 'إب (المدينة)', fee: 4000, estimatedDays: 'خلال 3-5 أيام', isActive: true },
+];
+
+export const INITIAL_PAYMENT_SETTINGS: PaymentDeliverySettings = {
+  exchangeRateYER: 535,
+  freeShippingThreshold: 150000,
+  defaultDeliveryFee: 3000,
+  codEnabled: true,
+  bankTransferEnabled: true,
+  bankAccounts: [...INITIAL_BANK_ACCOUNTS],
+  deliveryRates: [...INITIAL_DELIVERY_RATES],
+};
 
 export const INITIAL_BANNERS: BannerSlide[] = [
   {
@@ -72,10 +203,19 @@ class StoreDataRepository {
   private orders: OrderRecord[] = [...INITIAL_ORDERS];
   private coupons: CouponCode[] = [...INITIAL_COUPONS];
   private banners: BannerSlide[] = [...INITIAL_BANNERS];
+  private bankAccounts: BankAccount[] = [...INITIAL_BANK_ACCOUNTS];
+  private deliveryRates: CityDeliveryRate[] = [...INITIAL_DELIVERY_RATES];
+  private freeShippingThreshold: number = 350;
+  private defaultDeliveryFee: number = 25;
+  private codEnabled: boolean = true;
+  private bankTransferEnabled: boolean = true;
+
   private deletedProductIds: Set<string> = new Set();
   private deletedBannerIds: Set<string> = new Set();
   private deletedCategoryIds: Set<string> = new Set();
   private deletedCouponIds: Set<string> = new Set();
+  private deletedBankIds: Set<string> = new Set();
+  private deletedRateIds: Set<string> = new Set();
 
   // Products
   getProducts(): Product[] {
@@ -156,6 +296,14 @@ class StoreDataRepository {
   // Categories
   getCategories(): CategoryData[] {
     return this.categories.filter((c) => !this.deletedCategoryIds.has(c.id));
+  }
+
+  isCategoryDeleted(id: string): boolean {
+    return this.deletedCategoryIds.has(id);
+  }
+
+  isProductDeleted(id: string): boolean {
+    return this.deletedProductIds.has(id);
   }
 
   saveCategory(category: Partial<CategoryData>): CategoryData {
@@ -285,6 +433,135 @@ class StoreDataRepository {
     const prev = this.banners.length;
     this.banners = this.banners.filter((b) => b.id !== id);
     return this.banners.length < prev;
+  }
+
+  // Payment & Delivery Settings
+  getPaymentSettings(): PaymentDeliverySettings {
+    return {
+      freeShippingThreshold: this.freeShippingThreshold,
+      defaultDeliveryFee: this.defaultDeliveryFee,
+      codEnabled: this.codEnabled,
+      bankTransferEnabled: this.bankTransferEnabled,
+      bankAccounts: this.getBankAccounts(),
+      deliveryRates: this.getDeliveryRates(),
+    };
+  }
+
+  updatePaymentSettings(settings: Partial<PaymentDeliverySettings>): PaymentDeliverySettings {
+    if (settings.freeShippingThreshold !== undefined) {
+      this.freeShippingThreshold = Number(settings.freeShippingThreshold);
+    }
+    if (settings.defaultDeliveryFee !== undefined) {
+      this.defaultDeliveryFee = Number(settings.defaultDeliveryFee);
+    }
+    if (settings.codEnabled !== undefined) {
+      this.codEnabled = Boolean(settings.codEnabled);
+    }
+    if (settings.bankTransferEnabled !== undefined) {
+      this.bankTransferEnabled = Boolean(settings.bankTransferEnabled);
+    }
+    return this.getPaymentSettings();
+  }
+
+  // Bank Accounts
+  getBankAccounts(): BankAccount[] {
+    return this.bankAccounts.filter((b) => !this.deletedBankIds.has(b.id));
+  }
+
+  saveBankAccount(account: Partial<BankAccount>): BankAccount {
+    const id = account.id || `bank-${Date.now()}`;
+    this.deletedBankIds.delete(id);
+    const idx = this.bankAccounts.findIndex((b) => b.id === id);
+    const item: BankAccount = {
+      id,
+      name: account.name || 'حساب بنكي / محفظة جديدة',
+      type: account.type || 'bank',
+      accountName: account.accountName || 'متجر ليد لاين',
+      accountNumber: account.accountNumber || '',
+      iban: account.iban || '',
+      instructions: account.instructions || '',
+      logo: account.logo,
+      isActive: account.isActive !== false,
+    };
+
+    if (idx >= 0) {
+      this.bankAccounts[idx] = { ...this.bankAccounts[idx], ...item };
+      return this.bankAccounts[idx];
+    } else {
+      this.bankAccounts.push(item);
+      return item;
+    }
+  }
+
+  deleteBankAccount(id: string): boolean {
+    this.deletedBankIds.add(id);
+    const prev = this.bankAccounts.length;
+    this.bankAccounts = this.bankAccounts.filter((b) => b.id !== id);
+    return this.bankAccounts.length < prev;
+  }
+
+  // Delivery Rates
+  getDeliveryRates(): CityDeliveryRate[] {
+    return this.deliveryRates.filter((r) => !this.deletedRateIds.has(r.id));
+  }
+
+  getDeliveryFee(governorate?: string, city?: string, subtotal?: number): number {
+    if (subtotal !== undefined && this.freeShippingThreshold > 0 && subtotal >= this.freeShippingThreshold) {
+      return 0;
+    }
+
+    if (!city) {
+      return this.defaultDeliveryFee;
+    }
+
+    const rates = this.getDeliveryRates();
+    // Try exact city match
+    const matched = rates.find((r) => r.isActive && (
+      r.city.trim().toLowerCase() === city.trim().toLowerCase() ||
+      city.trim().toLowerCase().includes(r.city.trim().toLowerCase()) ||
+      r.city.trim().toLowerCase().includes(city.trim().toLowerCase())
+    ));
+
+    if (matched) {
+      return matched.fee;
+    }
+
+    // Try governorate match
+    if (governorate) {
+      const govMatched = rates.find((r) => r.isActive && r.governorate.trim().toLowerCase() === governorate.trim().toLowerCase());
+      if (govMatched) return govMatched.fee;
+    }
+
+    return this.defaultDeliveryFee;
+  }
+
+  saveDeliveryRate(rate: Partial<CityDeliveryRate>): CityDeliveryRate {
+    const id = rate.id || `rate-${Date.now()}`;
+    this.deletedRateIds.delete(id);
+    const idx = this.deliveryRates.findIndex((r) => r.id === id);
+    const item: CityDeliveryRate = {
+      id,
+      governorate: rate.governorate || 'حضرموت',
+      city: rate.city || 'المدينة',
+      fee: Number(rate.fee) >= 0 ? Number(rate.fee) : 25,
+      estimatedDays: rate.estimatedDays || 'خلال 24-48 ساعة',
+      isActive: rate.isActive !== false,
+    };
+
+    if (idx >= 0) {
+      this.deliveryRates[idx] = { ...this.deliveryRates[idx], ...item };
+      return this.deliveryRates[idx];
+    } else {
+      this.deliveryRates.push(item);
+      return item;
+    }
+  }
+
+  deleteDeliveryRate(id: string): boolean {
+    this.deletedRateIds.add(id);
+    const prev = this.deliveryRates.length;
+    this.deliveryRates = this.deliveryRates.filter((r) => r.id !== id);
+    return this.deliveryRates.length < prev;
   }
 }
 

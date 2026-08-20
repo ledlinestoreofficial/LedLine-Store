@@ -1,11 +1,12 @@
 "use client";
 
 import React from 'react';
-import { FilterState } from '../types';
+import { FilterState, CategoryData } from '../types';
 import { CATEGORIES } from '../data/products';
 import { SlidersHorizontal, RotateCcw } from 'lucide-react';
 
 interface FilterSidebarProps {
+  categories?: CategoryData[];
   filters: FilterState;
   onFilterChange: (newFilters: Partial<FilterState>) => void;
   onResetFilters: () => void;
@@ -14,11 +15,14 @@ interface FilterSidebarProps {
 }
 
 export const FilterSidebar: React.FC<FilterSidebarProps> = ({
+  categories,
   filters,
   onFilterChange,
   onResetFilters,
   totalMatches,
 }) => {
+  const activeCategories = (categories && categories.length > 0) ? categories : (CATEGORIES as CategoryData[]);
+
   return (
     <div className="bg-white rounded-2xl border border-[#E5E5E5] p-5 space-y-6">
       {/* Header */}
@@ -35,7 +39,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
 
         <button
           onClick={onResetFilters}
-          className="text-xs text-[#757575] hover:text-[#111111] font-semibold flex items-center gap-1 transition-colors"
+          className="text-xs text-[#757575] hover:text-[#111111] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
         >
           <RotateCcw className="w-3 h-3" />
           <span>إعادة ضبط</span>
@@ -48,11 +52,11 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
           التصنيف المعماري
         </label>
         <div className="space-y-1">
-          {CATEGORIES.map((cat) => (
+          {activeCategories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => onFilterChange({ category: cat.id })}
-              className={`w-full text-right px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
+              className={`w-full text-right px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
                 filters.category === cat.id
                   ? 'bg-[#111111] text-white'
                   : 'text-[#111111] hover:bg-[#F5F5F5]'

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { X, Star, Check, ShieldCheck, Heart, ShoppingBag } from 'lucide-react';
+import { X, Star, Check, ShieldCheck, Heart, ShoppingBag, ArrowRight, Truck, Award, Zap } from 'lucide-react';
 import { Product, CartItem } from '../types';
 
 interface ProductDetailModalProps {
@@ -12,6 +12,7 @@ interface ProductDetailModalProps {
   isWishlisted: boolean;
   onToggleWishlist: (p: Product) => void;
   lang?: 'ar' | 'en';
+  backLabel?: string;
 }
 
 export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
@@ -21,6 +22,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   onAddToCart,
   isWishlisted,
   onToggleWishlist,
+  backLabel,
 }) => {
   if (!isOpen || !product) return null;
 
@@ -57,127 +59,198 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     : 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl border border-[#E5E5E5] my-6 relative">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 left-4 z-20 w-10 h-10 rounded-full bg-white/90 hover:bg-white text-[#111111] shadow-md flex items-center justify-center transition-colors"
-          aria-label="إغلاق"
-        >
-          <X className="w-5 h-5" />
-        </button>
+    <div className="fixed inset-0 z-[60] bg-white flex flex-col overflow-y-auto animate-fadeIn">
+      {/* Top Header Bar */}
+      <div className="sticky top-0 z-20 w-full bg-white/95 backdrop-blur-md border-b border-[#E5E5E5] px-4 sm:px-8 lg:px-12 py-4 sm:py-5 flex items-center justify-between shadow-2xs">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <button
+            onClick={onClose}
+            className="p-2.5 rounded-full hover:bg-[#F5F5F5] text-[#111111] transition-colors cursor-pointer flex items-center gap-1.5"
+            aria-label={backLabel || "الرجوع للمتجر"}
+          >
+            <ArrowRight className="w-5 h-5" />
+            <span className="hidden sm:inline text-xs font-bold">{backLabel || "الرجوع للمتجر"}</span>
+          </button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 max-h-[85vh] overflow-y-auto">
-          {/* Left Column: Image Gallery */}
-          <div className="lg:col-span-6 bg-[#F5F5F5] p-6 sm:p-8 flex flex-col justify-between space-y-4">
-            <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-white shadow-sm border border-[#E5E5E5]">
-              <img
-                src={product.images[selectedImageIdx] || product.images[0]}
-                alt={product.name}
-                className="w-full h-full object-cover object-center"
-                referrerPolicy="no-referrer"
-              />
+          <div className="h-5 w-px bg-[#E5E5E5] hidden sm:block" />
 
-              {product.badge && (
-                <span className="absolute top-3 right-3 px-3 py-1 bg-[#111111] text-white text-xs font-bold rounded-full">
-                  {product.badge}
-                </span>
-              )}
-            </div>
-
-            {/* Thumbnails */}
-            {product.images.length > 1 && (
-              <div className="flex gap-2 justify-center">
-                {product.images.map((img, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setSelectedImageIdx(i)}
-                    className={`w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${
-                      selectedImageIdx === i ? 'border-[#111111] scale-105' : 'border-transparent opacity-60 hover:opacity-100'
-                    }`}
-                  >
-                    <img src={img} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Quick Guarantees Pill */}
-            <div className="bg-white p-4 rounded-2xl border border-[#E5E5E5] space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-[#111111]">
-                <ShieldCheck className="w-4 h-4 text-[#12805C]" />
-                <span>ضمان استبدال ذهبي معتمد</span>
-              </div>
-              <p className="text-[11px] text-[#757575] leading-relaxed">
-                مطابق للمواصفات والمقاييس والجودة مع شحن سريع وتغليف آمن ضد الكسر.
-              </p>
-            </div>
+          <div className="hidden sm:flex items-center gap-2 text-xs font-bold text-[#757575]">
+            <span>{product.categoryName}</span>
+            <span>/</span>
+            <span className="text-[#111111] truncate max-w-xs">{product.name}</span>
           </div>
+        </div>
 
-          {/* Right Column: Product Configurator & Specs */}
-          <div className="lg:col-span-6 p-6 sm:p-8 flex flex-col justify-between space-y-6">
-            <div className="space-y-4">
-              {/* Category & Rating */}
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-[#757575]">
-                  {product.categoryName} | SKU: {product.sku}
-                </span>
-                {Boolean(product.reviewsCount && product.reviewsCount > 0) && (
-                  <div className="flex items-center gap-1 text-sm font-bold text-[#111111] font-mono">
-                    <Star className="w-4 h-4 fill-[#111111] text-[#111111]" />
-                    <span>{product.rating}</span>
-                    <span className="text-xs text-[#757575]">({product.reviewsCount} تقييم)</span>
-                  </div>
-                )}
-              </div>
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Wishlist Button */}
+          <button
+            onClick={() => onToggleWishlist(product)}
+            className="p-2.5 sm:p-3 rounded-full border border-[#E5E5E5] hover:border-[#111111] bg-white transition-colors cursor-pointer"
+            aria-label="المفضلة"
+            title="حفظ في المفضلة"
+          >
+            <Heart
+              className={`w-5 h-5 ${
+                isWishlisted ? 'fill-[#D33918] text-[#D33918]' : 'text-[#111111]'
+              }`}
+            />
+          </button>
 
-              {/* Title */}
-              <h2 className="text-2xl sm:text-3xl font-black text-[#111111] tracking-tight leading-tight">
-                {product.name}
-              </h2>
+          {/* Close Button */}
+          <button
+            onClick={onClose}
+            className="p-2.5 rounded-full hover:bg-[#F5F5F5] text-[#111111] transition-colors cursor-pointer"
+            aria-label="إغلاق"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+      </div>
 
-              {/* Price Block */}
-              <div className="flex items-baseline gap-3 pb-3 border-b border-[#E5E5E5]">
-                <span className="text-3xl font-black text-[#111111] font-mono">
-                  {product.price * quantity} <span className="text-sm font-bold">ر.س</span>
-                </span>
-                {product.originalPrice && (
-                  <span className="text-base text-[#757575] line-through font-mono">
-                    {product.originalPrice * quantity} ر.س
+      {/* Main Full Screen Product Content */}
+      <div className="flex-1 bg-[#F9FAFB] py-8 sm:py-12 px-4 sm:px-8 lg:px-12">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+            
+            {/* Gallery Column (6 Cols) */}
+            <div className="lg:col-span-6 space-y-5 lg:sticky lg:top-28">
+              {/* Primary Image Viewport */}
+              <div className="relative aspect-4/3 sm:aspect-square w-full rounded-3xl overflow-hidden bg-white shadow-sm border border-[#E5E5E5] group">
+                <img
+                  src={product.images[selectedImageIdx] || product.images[0]}
+                  alt={product.name}
+                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
+                  referrerPolicy="no-referrer"
+                />
+
+                {product.badge && (
+                  <span className="absolute top-4 right-4 px-3.5 py-1.5 bg-[#111111] text-white text-xs font-bold rounded-full shadow-md">
+                    {product.badge}
                   </span>
                 )}
+
                 {discountPercent > 0 && (
-                  <span className="px-2.5 py-0.5 bg-[#D33918] text-white text-xs font-black rounded-full font-mono">
+                  <span className="absolute top-4 left-4 px-3 py-1 bg-[#D33918] text-white text-xs font-bold rounded-full shadow-md font-mono">
                     خصم {discountPercent}%
                   </span>
                 )}
               </div>
 
+              {/* Thumbnails Gallery */}
+              {product.images.length > 1 && (
+                <div className="flex gap-3 overflow-x-auto pb-2">
+                  {product.images.map((img, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setSelectedImageIdx(i)}
+                      className={`w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 transition-all flex-shrink-0 bg-white cursor-pointer ${
+                        selectedImageIdx === i ? 'border-[#111111] shadow-md scale-102' : 'border-[#E5E5E5] opacity-70 hover:opacity-100'
+                      }`}
+                    >
+                      <img src={img} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Value Guarantees Banner */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                <div className="bg-white p-4 rounded-2xl border border-[#E5E5E5] flex items-center gap-3">
+                  <ShieldCheck className="w-6 h-6 text-[#12805C] flex-shrink-0" />
+                  <div>
+                    <span className="text-xs font-bold text-[#111111] block">ضمان معتمد</span>
+                    <span className="text-[11px] text-[#757575]">{product.specs.warranty || 'ضمان ذهبي سنتين'}</span>
+                  </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-2xl border border-[#E5E5E5] flex items-center gap-3">
+                  <Truck className="w-6 h-6 text-[#111111] flex-shrink-0" />
+                  <div>
+                    <span className="text-xs font-bold text-[#111111] block">شحن سريع</span>
+                    <span className="text-[11px] text-[#757575]">تغليف آمن ضد الكسر</span>
+                  </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-2xl border border-[#E5E5E5] flex items-center gap-3">
+                  <Award className="w-6 h-6 text-[#111111] flex-shrink-0" />
+                  <div>
+                    <span className="text-xs font-bold text-[#111111] block">مطابق للمواصفات</span>
+                    <span className="text-[11px] text-[#757575]">معايير الجودة SASO</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Product Configurator & Specs Column (6 Cols) */}
+            <div className="lg:col-span-6 bg-white rounded-3xl p-6 sm:p-10 border border-[#E5E5E5] shadow-xs space-y-6">
+              
+              {/* Category, SKU & Ratings */}
+              <div className="flex items-center justify-between pb-2 border-b border-[#E5E5E5]">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#757575]">
+                  {product.categoryName} | SKU: <span className="font-mono text-[#111111]">{product.sku}</span>
+                </span>
+                {Boolean(product.reviewsCount && product.reviewsCount > 0) ? (
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#111111] bg-[#F5F5F5] px-3 py-1 rounded-full">
+                    <Star className="w-3.5 h-3.5 fill-[#111111] text-[#111111]" />
+                    <span>{product.rating}</span>
+                    <span className="text-[#757575]">({product.reviewsCount} تقييم)</span>
+                  </div>
+                ) : (
+                  <span className="text-xs font-bold text-[#12805C] bg-[#F0FDF4] px-3 py-1 rounded-full">
+                    متوفر في المخزون
+                  </span>
+                )}
+              </div>
+
+              {/* Title */}
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#111111] tracking-tight leading-tight">
+                {product.name}
+              </h1>
+
+              {/* Price Display */}
+              <div className="flex items-baseline gap-4 py-3 border-y border-[#E5E5E5]">
+                <span className="text-3xl sm:text-4xl font-black text-[#111111]">
+                  {product.price * quantity} <span className="text-base font-bold">ر.س</span>
+                </span>
+                {product.originalPrice && (
+                  <span className="text-lg text-[#757575] line-through">
+                    {product.originalPrice * quantity} ر.س
+                  </span>
+                )}
+                <span className="text-xs text-[#757575] font-semibold mr-auto">
+                  السعر شامل ضريبة القيمة المضافة 15%
+                </span>
+              </div>
+
               {/* Description */}
-              <p className="text-sm text-[#757575] leading-relaxed">
-                {product.description}
-              </p>
+              <div className="space-y-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#757575]">
+                  تفاصيل ووصف المنتج
+                </h3>
+                <p className="text-sm sm:text-base text-[#444444] leading-relaxed">
+                  {product.description}
+                </p>
+              </div>
 
               {/* Color Temperature Selector */}
               {product.colorOptions && product.colorOptions.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs font-bold">
-                    <span className="text-[#111111]">درجة لون الإضاءة:</span>
+                <div className="space-y-3 pt-2">
+                  <div className="flex justify-between text-xs sm:text-sm font-bold">
+                    <span className="text-[#111111]">درجة حرارة لون الإضاءة (CCT):</span>
                     <span className="text-[#757575] font-mono">{selectedColorTemp}</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                     {product.colorOptions.map((opt) => (
                       <button
                         key={opt.temp || opt.name}
                         onClick={() => setSelectedColorTemp(opt.temp || opt.name)}
-                        className={`p-2.5 rounded-xl border text-xs font-bold flex items-center gap-2 transition-all ${
+                        className={`p-3 rounded-2xl border text-xs sm:text-sm font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
                           selectedColorTemp === (opt.temp || opt.name)
-                            ? 'border-[#111111] bg-[#111111] text-white'
+                            ? 'border-[#111111] bg-[#111111] text-white shadow-xs'
                             : 'border-[#E5E5E5] bg-white text-[#111111] hover:bg-[#F5F5F5]'
                         }`}
                       >
-                        <span className="w-3.5 h-3.5 rounded-full border border-black/20" style={{ backgroundColor: opt.hex }} />
+                        <span className="w-4 h-4 rounded-full border border-black/20 flex-shrink-0" style={{ backgroundColor: opt.hex }} />
                         <span className="truncate">{opt.name}</span>
                       </button>
                     ))}
@@ -185,25 +258,25 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </div>
               )}
 
-              {/* Finish Options Selector (for Wood Panels) */}
+              {/* Finish Options Selector */}
               {product.finishOptions && product.finishOptions.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs font-bold">
-                    <span className="text-[#111111]">نوع التشطيب وقشرة الخشب:</span>
+                <div className="space-y-3 pt-2">
+                  <div className="flex justify-between text-xs sm:text-sm font-bold">
+                    <span className="text-[#111111]">نوع التشطيب والقشرة الخشبية:</span>
                     <span className="text-[#757575]">{selectedFinish}</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                     {product.finishOptions.map((f) => (
                       <button
                         key={f.name}
                         onClick={() => setSelectedFinish(f.name)}
-                        className={`p-2.5 rounded-xl border text-xs font-bold flex items-center gap-2 transition-all ${
+                        className={`p-3 rounded-2xl border text-xs sm:text-sm font-bold flex items-center gap-2.5 transition-all cursor-pointer ${
                           selectedFinish === f.name
-                            ? 'border-[#111111] bg-[#111111] text-white'
+                            ? 'border-[#111111] bg-[#111111] text-white shadow-xs'
                             : 'border-[#E5E5E5] bg-white text-[#111111] hover:bg-[#F5F5F5]'
                         }`}
                       >
-                        <span className="w-3.5 h-3.5 rounded-full border border-black/20" style={{ backgroundColor: f.hex }} />
+                        <span className="w-4 h-4 rounded-full border border-black/20 flex-shrink-0" style={{ backgroundColor: f.hex }} />
                         <span className="truncate">{f.name}</span>
                       </button>
                     ))}
@@ -211,109 +284,100 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </div>
               )}
 
-              {/* Technical Specs Table */}
-              <div className="bg-[#F5F5F5] rounded-2xl p-4 space-y-2 text-xs">
-                <p className="font-bold text-[#111111] uppercase tracking-wider text-[11px]">
-                  المواصفات الهندسية
-                </p>
-                <div className="grid grid-cols-2 gap-y-2 gap-x-4">
+              {/* Engineering Specs Matrix */}
+              <div className="bg-[#F5F5F5] rounded-3xl p-5 sm:p-6 space-y-3">
+                <div className="flex items-center gap-2 font-bold text-[#111111] text-xs uppercase tracking-wider">
+                  <Zap className="w-4 h-4 text-[#111111]" />
+                  <span>المواصفات الفنية والهندسية</span>
+                </div>
+                <div className="grid grid-cols-2 gap-y-3 gap-x-6 text-xs sm:text-sm">
                   {product.specs.wattage && (
                     <div>
-                      <span className="text-[#757575]">القدرة:</span>{' '}
-                      <span className="font-bold text-[#111111] font-mono">{product.specs.wattage}</span>
+                      <span className="text-[#757575] block text-[11px]">القدرة الكهربائية</span>
+                      <span className="font-bold text-[#111111]">{product.specs.wattage}</span>
                     </div>
                   )}
                   {product.specs.voltage && (
                     <div>
-                      <span className="text-[#757575]">الجهد:</span>{' '}
-                      <span className="font-bold text-[#111111] font-mono">{product.specs.voltage}</span>
+                      <span className="text-[#757575] block text-[11px]">الجهد التشغيلي</span>
+                      <span className="font-bold text-[#111111]">{product.specs.voltage}</span>
                     </div>
                   )}
                   {product.specs.cri && (
                     <div>
-                      <span className="text-[#757575]">نقاء اللون:</span>{' '}
+                      <span className="text-[#757575] block text-[11px]">مؤشر وضوح اللون (CRI)</span>
                       <span className="font-bold text-[#111111]">{product.specs.cri}</span>
                     </div>
                   )}
                   {product.specs.ipRating && (
                     <div>
-                      <span className="text-[#757575]">الحماية:</span>{' '}
+                      <span className="text-[#757575] block text-[11px]">معيار الحماية</span>
                       <span className="font-bold text-[#111111]">{product.specs.ipRating}</span>
                     </div>
                   )}
                   {product.specs.warranty && (
                     <div>
-                      <span className="text-[#757575]">الضمان:</span>{' '}
+                      <span className="text-[#757575] block text-[11px]">فترة الضمان</span>
                       <span className="font-bold text-[#12805C]">{product.specs.warranty}</span>
                     </div>
                   )}
                   {product.specs.dimensions && (
-                    <div className="col-span-2">
-                      <span className="text-[#757575]">الأبعاد:</span>{' '}
+                    <div>
+                      <span className="text-[#757575] block text-[11px]">الأبعاد والمقاسات</span>
                       <span className="font-bold text-[#111111]">{product.specs.dimensions}</span>
                     </div>
                   )}
                 </div>
               </div>
-            </div>
 
-            {/* Bottom Actions: Quantity + Add to Bag */}
-            <div className="pt-4 border-t border-[#E5E5E5] space-y-3">
-              <div className="flex items-center gap-3">
-                {/* Quantity Pill */}
-                <div className="flex items-center bg-[#F5F5F5] rounded-full border border-[#E5E5E5] px-3 py-1.5">
+              {/* Add to Cart Actions Bar */}
+              <div className="pt-4 border-t border-[#E5E5E5] space-y-4">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  
+                  {/* Quantity Counter */}
+                  <div className="flex items-center justify-between sm:justify-center bg-[#F5F5F5] rounded-full border border-[#E5E5E5] px-4 py-2.5">
+                    <button
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="w-8 h-8 flex items-center justify-center font-bold text-lg text-[#111111] hover:bg-white rounded-full transition-colors cursor-pointer"
+                    >
+                      -
+                    </button>
+                    <span className="w-12 text-center font-black text-base">{quantity}</span>
+                    <button
+                      onClick={() => setQuantity(quantity + 1)}
+                      className="w-8 h-8 flex items-center justify-center font-bold text-lg text-[#111111] hover:bg-white rounded-full transition-colors cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  {/* Add to Bag Button */}
                   <button
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="w-7 h-7 flex items-center justify-center font-bold text-lg text-[#111111] hover:bg-[#E5E5E5] rounded-full transition-colors"
+                    onClick={handleAddToCart}
+                    disabled={isAdded}
+                    className={`flex-1 py-4 px-8 rounded-full font-black text-sm sm:text-base flex items-center justify-center gap-2.5 transition-all shadow-md active:scale-98 cursor-pointer ${
+                      isAdded
+                        ? 'bg-[#12805C] text-white'
+                        : 'bg-[#111111] hover:bg-[#2A2A2A] text-white'
+                    }`}
                   >
-                    -
-                  </button>
-                  <span className="w-10 text-center font-bold font-mono text-sm">{quantity}</span>
-                  <button
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="w-7 h-7 flex items-center justify-center font-bold text-lg text-[#111111] hover:bg-[#E5E5E5] rounded-full transition-colors"
-                  >
-                    +
+                    {isAdded ? (
+                      <>
+                        <Check className="w-5 h-5" />
+                        <span>تمت الإضافة إلى السلة بنجاح!</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingBag className="w-5 h-5" />
+                        <span>إضافة للسلة ({product.price * quantity} ر.س)</span>
+                      </>
+                    )}
                   </button>
                 </div>
-
-                {/* Add to Bag Button */}
-                <button
-                  onClick={handleAddToCart}
-                  disabled={isAdded}
-                  className={`flex-1 py-3.5 px-6 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-98 ${
-                    isAdded
-                      ? 'bg-[#12805C] text-white'
-                      : 'bg-[#111111] hover:bg-[#2A2A2A] text-white'
-                  }`}
-                >
-                  {isAdded ? (
-                    <>
-                      <Check className="w-5 h-5" />
-                      <span>تمت الإضافة للسلة!</span>
-                    </>
-                  ) : (
-                    <>
-                      <ShoppingBag className="w-4 h-4" />
-                      <span>إضافة للسلة ({product.price * quantity} ر.س)</span>
-                    </>
-                  )}
-                </button>
-
-                {/* Wishlist Button */}
-                <button
-                  onClick={() => onToggleWishlist(product)}
-                  className="p-3.5 rounded-full border border-[#E5E5E5] hover:border-[#111111] bg-white transition-colors"
-                  aria-label="المفضلة"
-                >
-                  <Heart
-                    className={`w-5 h-5 ${
-                      isWishlisted ? 'fill-[#D33918] text-[#D33918]' : 'text-[#111111]'
-                    }`}
-                  />
-                </button>
               </div>
+
             </div>
+
           </div>
         </div>
       </div>

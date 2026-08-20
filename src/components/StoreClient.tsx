@@ -15,8 +15,6 @@ import { Footer } from './Footer';
 import Link from 'next/link';
 import {
   Sparkles,
-  Grid3X3,
-  Grid2X2,
   ArrowUpDown,
   LayoutDashboard,
   ArrowLeft,
@@ -52,9 +50,7 @@ export function StoreClient({ initialProducts = [], categories = [], banners = [
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [activeProductModal, setActiveProductModal] = useState<Product | null>(null);
-
-  // Layout View Mode (standard 3/4 col grid or dense grid)
-  const [isCompactGrid, setIsCompactGrid] = useState(false);
+  const [returnToCartOnProductClose, setReturnToCartOnProductClose] = useState(false);
 
   // Cart & Wishlist State
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -112,36 +108,43 @@ export function StoreClient({ initialProducts = [], categories = [], banners = [
 
   // Cart Handlers
   const handleAddToCart = (itemData: Omit<CartItem, 'id'>) => {
+    const qtyToAdd = Math.max(1, Number(itemData.quantity) || 1);
     setCartItems((prev) => {
       const existingIdx = prev.findIndex(
         (i) =>
           i.productId === itemData.productId &&
-          i.selectedColorTemp === itemData.selectedColorTemp &&
-          i.selectedFinish === itemData.selectedFinish
+          (i.selectedColorTemp || null) === (itemData.selectedColorTemp || null) &&
+          (i.selectedFinish || null) === (itemData.selectedFinish || null)
       );
       if (existingIdx > -1) {
-        const updated = [...prev];
-        updated[existingIdx].quantity += itemData.quantity;
-        return updated;
+        return prev.map((item, idx) => {
+          if (idx === existingIdx) {
+            return {
+              ...item,
+              quantity: item.quantity + qtyToAdd,
+            };
+          }
+          return item;
+        });
       }
       return [
         ...prev,
         {
           ...itemData,
-          id: `${itemData.productId}-${Date.now()}`
+          quantity: qtyToAdd,
+          id: `${itemData.productId}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
         }
       ];
     });
     setIsCartOpen(true);
   };
 
-  const handleUpdateCartQuantity = (cartItemId: string, delta: number) => {
+  const handleUpdateCartQuantity = (cartItemId: string, newQuantity: number) => {
     setCartItems((prev) =>
       prev
         .map((item) => {
           if (item.id === cartItemId) {
-            const newQty = item.quantity + delta;
-            return newQty > 0 ? { ...item, quantity: newQty } : null;
+            return newQuantity > 0 ? { ...item, quantity: newQuantity } : null;
           }
           return item;
         })
@@ -329,17 +332,12 @@ export function StoreClient({ initialProducts = [], categories = [], banners = [
         <section id="product-catalog" className="py-12 sm:py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Catalog Top Controls Bar */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-[#E5E5E5]">
-            {/* Title & Count */}
+            {/* Title */}
             <div>
-              <h2 className="text-2xl sm:text-3xl font-black text-[#111111] tracking-tight font-display flex items-center gap-2">
-                <span>
-                  {selectedCategory === 'all'
-                    ? 'كافة المنتجات والأنظمة المعمارية'
-                    : categories.find((c) => c.id === selectedCategory)?.name || selectedCategory}
-                </span>
-                <span className="text-xs font-mono font-bold bg-[#F5F5F5] text-[#757575] px-2.5 py-1 rounded-full">
-                  {filteredProducts.length} منتج
-                </span>
+              <h2 className="text-2xl sm:text-3xl font-black text-[#111111] tracking-tight font-display">
+                {selectedCategory === 'all'
+                  ? 'كافة المنتجات والأنظمة المعمارية'
+                  : categories.find((c) => c.id === selectedCategory)?.name || selectedCategory}
               </h2>
               {searchQuery && (
                 <p className="text-xs text-[#757575] mt-1">
@@ -419,30 +417,6 @@ export function StoreClient({ initialProducts = [], categories = [], banners = [
                   <span>مسح الفلاتر</span>
                 </button>
               )}
-
-              {/* Grid density switcher */}
-              <div className="hidden xl:flex items-center bg-[#F5F5F5] rounded-full p-1 border border-[#E5E5E5] mr-auto">
-                <button
-                  onClick={() => setIsCompactGrid(false)}
-                  className={`p-1.5 rounded-full transition-colors cursor-pointer ${
-                    !isCompactGrid ? 'bg-white shadow-xs text-[#111111]' : 'text-[#757575]'
-                  }`}
-                  aria-label="عرض قياسي"
-                  title="عرض 4 أعمدة"
-                >
-                  <Grid2X2 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setIsCompactGrid(true)}
-                  className={`p-1.5 rounded-full transition-colors cursor-pointer ${
-                    isCompactGrid ? 'bg-white shadow-xs text-[#111111]' : 'text-[#757575]'
-                  }`}
-                  aria-label="عرض مدمج"
-                  title="عرض مدمج"
-                >
-                  <Grid3X3 className="w-4 h-4" />
-                </button>
-              </div>
             </div>
           </div>
 
@@ -465,13 +439,7 @@ export function StoreClient({ initialProducts = [], categories = [], banners = [
                 </button>
               </div>
             ) : (
-              <div
-                className={`grid gap-5 sm:gap-6 ${
-                  isCompactGrid
-                    ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
-                    : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
-                }`}
-              >
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 sm:gap-6">
                 {filteredProducts.map((product) => (
                   <ProductCard
                     key={product.id}
@@ -490,6 +458,7 @@ export function StoreClient({ initialProducts = [], categories = [], banners = [
 
       {/* Footer */}
       <Footer
+        categories={categories}
         onSelectCategory={handleSelectCategory}
       />
 
@@ -497,10 +466,17 @@ export function StoreClient({ initialProducts = [], categories = [], banners = [
       <ProductDetailModal
         product={activeProductModal}
         isOpen={!!activeProductModal}
-        onClose={() => setActiveProductModal(null)}
+        onClose={() => {
+          setActiveProductModal(null);
+          if (returnToCartOnProductClose) {
+            setIsCartOpen(true);
+            setReturnToCartOnProductClose(false);
+          }
+        }}
         onAddToCart={handleAddToCart}
         isWishlisted={activeProductModal ? isWishlisted(activeProductModal.id) : false}
         onToggleWishlist={handleToggleWishlist}
+        backLabel={returnToCartOnProductClose ? "الرجوع للسلة" : "الرجوع للمتجر"}
       />
 
       <WoodAndLedCalculator
@@ -523,11 +499,22 @@ export function StoreClient({ initialProducts = [], categories = [], banners = [
         onApplyCoupon={handleApplyCoupon}
         onRemoveCoupon={handleRemoveCoupon}
         discountAmount={discountAmount}
+        onOpenProduct={(productId) => {
+          const prod = initialProducts.find((p) => p.id === productId);
+          if (prod) {
+            setReturnToCartOnProductClose(true);
+            setActiveProductModal(prod);
+          }
+        }}
       />
 
       <CheckoutModal
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
+        onBackToCart={() => {
+          setIsCheckoutOpen(false);
+          setIsCartOpen(true);
+        }}
         cartItems={cartItems}
         subtotal={subtotal}
         discountAmount={discountAmount}
@@ -561,11 +548,11 @@ export function StoreClient({ initialProducts = [], categories = [], banners = [
               <span className="text-xs font-bold text-white tracking-wide">
                 لوحة التحكم (BFF)
               </span>
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-white/20 text-white font-mono">
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-white/20 text-white">
                 Admin
               </span>
             </div>
-            <p className="text-[10px] text-gray-400 font-mono">
+            <p className="text-[10px] text-gray-400">
               إدارة المنتجات والبنرات
             </p>
           </div>

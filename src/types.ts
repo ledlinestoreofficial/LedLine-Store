@@ -126,11 +126,43 @@ export interface LookbookItem {
   hotspots: LookbookHotspot[];
 }
 
-export type PaymentMethodType = 'mada' | 'applepay' | 'tamara' | 'cod';
+export type PaymentMethodType = 'cod' | 'bank_transfer' | 'mada' | 'applepay' | 'tamara';
+
+export interface BankAccount {
+  id: string;
+  name: string; // e.g. "بنك الكريمي", "بن دول باي", "محفظة قروشي", "البسيري", "بي كاش", "بنك أمجاد"
+  type: 'bank' | 'wallet';
+  accountName: string; // اسم صاحب الحساب / المستفيد
+  accountNumber: string; // رقم الحساب أو رقم المحفظة
+  iban?: string;
+  instructions?: string; // تعليمات أو ملاحظات الإيداع
+  logo?: string;
+  isActive: boolean;
+}
+
+export interface CityDeliveryRate {
+  id: string;
+  governorate: string; // المحافظة
+  city: string; // المدينة / المديرية
+  fee: number; // رسوم التوصيل بالريال اليمني (YER)
+  estimatedDays?: string; // مدة التوصيل التقريبية
+  isActive: boolean;
+}
+
+export interface PaymentDeliverySettings {
+  exchangeRateYER?: number; // سعر صرف الريال اليمني مقابل السعودي (مثال: 535)
+  freeShippingThreshold?: number; // الحد الأدنى للشحن المجاني بالريال اليمني (0 يعني غير مفعل)
+  defaultDeliveryFee: number; // رسوم التوصيل الافتراضية بالريال اليمني
+  codEnabled: boolean;
+  bankTransferEnabled: boolean;
+  bankAccounts: BankAccount[];
+  deliveryRates: CityDeliveryRate[];
+}
 
 export interface CustomerInfo {
   fullName: string;
   phone: string;
+  governorate?: string;
   city: string;
   address: string;
   notes?: string;
@@ -151,6 +183,9 @@ export interface OrderCreationRequest {
   customer: CustomerInfo;
   paymentMethod: PaymentMethodType;
   couponCode?: string;
+  depositReceiptUrl?: string;
+  selectedBankId?: string;
+  selectedBankName?: string;
 }
 
 export interface CalculatedOrderItem {
@@ -183,6 +218,9 @@ export interface OrderRecord {
   items: CalculatedOrderItem[];
   summary: OrderFinancialSummary;
   paymentMethod: PaymentMethodType;
+  depositReceiptUrl?: string;
+  selectedBankId?: string;
+  selectedBankName?: string;
   status: OrderStatus;
   createdAt: string;
 }

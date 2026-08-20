@@ -15,6 +15,7 @@ import {
   ExternalLink,
   ShieldCheck,
   Megaphone,
+  CreditCard,
 } from 'lucide-react';
 
 const RAW_NAV_ITEMS = [
@@ -22,6 +23,7 @@ const RAW_NAV_ITEMS = [
   { path: '/banners', label: 'البنرات الإعلانية', icon: Megaphone },
   { path: '/products', label: 'المنتجات والكتالوج', icon: Package },
   { path: '/orders', label: 'الطلبات والمبيعات', icon: ShoppingBag },
+  { path: '/payments-delivery', label: 'الدفع ورسوم التوصيل', icon: CreditCard },
   { path: '/categories', label: 'الأقسام والتصنيفات', icon: Layers },
   { path: '/inventory', label: 'إدارة المخزون', icon: Warehouse },
   { path: '/coupons', label: 'كوبونات الخصم', icon: Tag },

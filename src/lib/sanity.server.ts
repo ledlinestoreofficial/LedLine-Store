@@ -545,6 +545,9 @@ export async function adminGetOrders(): Promise<OrderRecord[]> {
     items,
     summary,
     paymentMethod,
+    depositReceiptUrl,
+    selectedBankId,
+    selectedBankName,
     status,
     createdAt
   }`;
@@ -580,11 +583,16 @@ export async function getSanityCategories(): Promise<CategoryData[]> {
   const defaultCategories = storeRepo.getCategories();
   let baseCategories: CategoryData[] = [];
 
-  if (rawCategories && rawCategories.length > 0) {
+  // Filter out any locally deleted categories from Sanity response
+  const activeSanityCategories = (rawCategories || []).filter(
+    (c) => !storeRepo.isCategoryDeleted(c.id)
+  );
+
+  if (activeSanityCategories.length > 0) {
     // Map fetched categories
-    const sanityMap = new Map(rawCategories.map((c) => [c.id, c]));
+    const sanityMap = new Map(activeSanityCategories.map((c) => [c.id, c]));
     // Merge defaults so standard category ids maintain icons/images if not set
-    const merged = rawCategories.map((c) => {
+    const merged = activeSanityCategories.map((c) => {
       const def = defaultCategories.find((d) => d.id === c.id);
       return {
         ...c,
@@ -594,15 +602,17 @@ export async function getSanityCategories(): Promise<CategoryData[]> {
       };
     });
 
-    // Also include any default categories not in Sanity yet
-    const missingDefaults = defaultCategories.filter((d) => !sanityMap.has(d.id));
+    // Also include any default categories not in Sanity yet (and not deleted)
+    const missingDefaults = defaultCategories.filter(
+      (d) => !sanityMap.has(d.id) && !storeRepo.isCategoryDeleted(d.id)
+    );
     baseCategories = [...merged, ...missingDefaults];
   } else {
     baseCategories = defaultCategories;
   }
 
   // Compute real actual count for each category based on live products
-  return baseCategories.map((cat) => {
+  const computedCategories = baseCategories.map((cat) => {
     const realCount = cat.id === 'all'
       ? products.length
       : products.filter((p) => p.category === cat.id).length;
@@ -611,6 +621,26 @@ export async function getSanityCategories(): Promise<CategoryData[]> {
       count: realCount,
     };
   });
+
+  // Guarantee that "all" (الكل / جميع المنتجات) is ALWAYS permanently the first element (index 0)
+  const allCategory = computedCategories.find((c) => c.id === 'all');
+  const otherCategories = computedCategories.filter((c) => c.id !== 'all');
+
+  if (allCategory) {
+    return [allCategory, ...otherCategories];
+  } else {
+    // If 'all' was missing, construct it as index 0
+    const defaultAll: CategoryData = {
+      id: 'all',
+      name: 'جميع المنتجات',
+      nameEn: 'All Products',
+      icon: 'Sparkles',
+      count: products.length,
+      image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=800&auto=format&fit=crop',
+      description: 'كافة الحلول والأنظمة المعمارية المتكاملة',
+    };
+    return [defaultAll, ...otherCategories];
+  }
 }
 
 export async function adminGetCategories(): Promise<CategoryData[]> {
@@ -738,6 +768,7 @@ export async function createSanityOrder(order: OrderRecord): Promise<{ success: 
     customer: {
       fullName: order.customer.fullName,
       phone: order.customer.phone,
+      governorate: order.customer.governorate || '',
       city: order.customer.city,
       address: order.customer.address,
       notes: order.customer.notes || '',
@@ -762,6 +793,9 @@ export async function createSanityOrder(order: OrderRecord): Promise<{ success: 
       finalTotal: order.summary.finalTotal,
     },
     paymentMethod: order.paymentMethod,
+    depositReceiptUrl: order.depositReceiptUrl || null,
+    selectedBankId: order.selectedBankId || null,
+    selectedBankName: order.selectedBankName || null,
     status: order.status,
     createdAt: order.createdAt,
   };
@@ -776,4 +810,41 @@ export async function createSanityOrder(order: OrderRecord): Promise<{ success: 
     success: true,
     transactionId: mutationResult?.transactionId || `local-${Date.now()}`,
   };
+}
+
+/**
+ * Payment & Delivery Server Operations
+ */
+export async function adminGetPaymentSettings() {
+  return storeRepo.getPaymentSettings();
+}
+
+export async function adminSavePaymentSettings(settings: any) {
+  const updated = storeRepo.updatePaymentSettings(settings);
+  invalidateSanityCache();
+  return updated;
+}
+
+export async function adminSaveBankAccount(account: any) {
+  const saved = storeRepo.saveBankAccount(account);
+  invalidateSanityCache();
+  return saved;
+}
+
+export async function adminDeleteBankAccount(id: string) {
+  const deleted = storeRepo.deleteBankAccount(id);
+  invalidateSanityCache();
+  return deleted;
+}
+
+export async function adminSaveDeliveryRate(rate: any) {
+  const saved = storeRepo.saveDeliveryRate(rate);
+  invalidateSanityCache();
+  return saved;
+}
+
+export async function adminDeleteDeliveryRate(id: string) {
+  const deleted = storeRepo.deleteDeliveryRate(id);
+  invalidateSanityCache();
+  return deleted;
 }

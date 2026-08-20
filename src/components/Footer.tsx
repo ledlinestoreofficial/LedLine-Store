@@ -2,18 +2,32 @@
 
 import React from 'react';
 import { Phone, MapPin, Mail } from 'lucide-react';
-import { CategoryId } from '../types';
+import { CategoryId, CategoryData } from '../types';
 import { CATEGORIES } from '../data/products';
 import { BRAND_CONFIG } from '../data/brand';
 
 interface FooterProps {
+  categories?: CategoryData[];
   onSelectCategory: (c: CategoryId) => void;
   lang?: 'ar' | 'en';
 }
 
 export const Footer: React.FC<FooterProps> = ({
+  categories,
   onSelectCategory,
 }) => {
+  const rawCats = (categories && categories.length > 0) ? categories : (CATEGORIES as CategoryData[]);
+  // Get all active store categories except 'all'
+  const displayCategories = rawCats.filter((c) => c.id !== 'all');
+
+  const handleCategoryClick = (catId: CategoryId) => {
+    onSelectCategory(catId);
+    const catalogEl = document.getElementById('product-catalog');
+    if (catalogEl) {
+      catalogEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
     <footer className="bg-[#111111] text-white pt-16 pb-12 border-t border-[#222222]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
@@ -39,19 +53,20 @@ export const Footer: React.FC<FooterProps> = ({
             </p>
           </div>
 
-          {/* Categories Col */}
+          {/* Categories Col - Dynamic from Sanity */}
           <div className="space-y-3">
             <h5 className="text-xs font-bold uppercase tracking-wider text-white">
               أقسام المنتجات
             </h5>
-            <ul className="space-y-2 text-xs text-[#757575]">
-              {CATEGORIES.slice(1, 7).map((cat) => (
+            <ul className="space-y-2.5 text-xs text-[#757575]">
+              {displayCategories.map((cat) => (
                 <li key={cat.id}>
                   <button
-                    onClick={() => onSelectCategory(cat.id)}
-                    className="hover:text-white transition-colors text-right"
+                    onClick={() => handleCategoryClick(cat.id)}
+                    className="hover:text-white transition-colors text-right cursor-pointer flex items-center gap-2 group"
                   >
-                    {cat.name}
+                    <span className="w-1 h-1 rounded-full bg-white/30 group-hover:bg-[#FFF2B2] group-hover:scale-125 transition-all" />
+                    <span>{cat.name}</span>
                   </button>
                 </li>
               ))}
@@ -81,11 +96,11 @@ export const Footer: React.FC<FooterProps> = ({
             <ul className="space-y-2.5 text-xs text-[#757575]">
               <li className="flex items-center gap-2">
                 <Phone className="w-3.5 h-3.5 text-white flex-shrink-0" />
-                <span className="font-mono text-white font-semibold">920008899 / 0500123456</span>
+                <span className="text-white font-semibold">920008899 / 0500123456</span>
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="w-3.5 h-3.5 text-white flex-shrink-0" />
-                <span className="font-mono">ledlinestoreofficial@gmail.com</span>
+                <span>ledlinestoreofficial@gmail.com</span>
               </li>
             </ul>
           </div>

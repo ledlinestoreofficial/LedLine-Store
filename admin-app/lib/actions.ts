@@ -733,3 +733,118 @@ export async function syncAllCatalogToSanityAction(): Promise<ActionResult & { s
   }
 }
 
+/**
+ * Save Payment & Delivery General Settings
+ */
+export async function savePaymentSettingsAction(settings: {
+  freeShippingThreshold?: number;
+  defaultDeliveryFee?: number;
+  codEnabled?: boolean;
+  bankTransferEnabled?: boolean;
+}): Promise<ActionResult> {
+  try {
+    const { adminSavePaymentSettings } = await import('./sanity.server');
+    await adminSavePaymentSettings(settings);
+
+    revalidatePath('/admin/payments-delivery');
+    revalidatePath('/admin');
+    revalidatePath('/');
+
+    return {
+      success: true,
+      message: 'تم حفظ إعدادات الدفع والتوصيل بنجاح',
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'فشل حفظ إعدادات الدفع';
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * Save / Update Bank Account or Digital Wallet
+ */
+export async function saveBankAccountAction(accountData: any): Promise<ActionResult> {
+  try {
+    const { adminSaveBankAccount } = await import('./sanity.server');
+    await adminSaveBankAccount(accountData);
+
+    revalidatePath('/admin/payments-delivery');
+    revalidatePath('/admin');
+    revalidatePath('/');
+
+    return {
+      success: true,
+      message: 'تم حفظ الحساب البنكي / المحفظة بنجاح',
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'فشل حفظ الحساب البنكي';
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * Delete Bank Account or Digital Wallet
+ */
+export async function deleteBankAccountAction(id: string): Promise<ActionResult> {
+  try {
+    const { adminDeleteBankAccount } = await import('./sanity.server');
+    await adminDeleteBankAccount(id);
+
+    revalidatePath('/admin/payments-delivery');
+    revalidatePath('/admin');
+    revalidatePath('/');
+
+    return {
+      success: true,
+      message: 'تم حذف الحساب بنجاح',
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'فشل حذف الحساب';
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * Save / Update City Delivery Rate
+ */
+export async function saveDeliveryRateAction(rateData: any): Promise<ActionResult> {
+  try {
+    const { adminSaveDeliveryRate } = await import('./sanity.server');
+    await adminSaveDeliveryRate(rateData);
+
+    revalidatePath('/admin/payments-delivery');
+    revalidatePath('/admin');
+    revalidatePath('/');
+
+    return {
+      success: true,
+      message: 'تم حفظ تسعيرة التوصيل للمدينة بنجاح',
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'فشل حفظ تسعيرة التوصيل';
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * Delete City Delivery Rate
+ */
+export async function deleteDeliveryRateAction(id: string): Promise<ActionResult> {
+  try {
+    const { adminDeleteDeliveryRate } = await import('./sanity.server');
+    await adminDeleteDeliveryRate(id);
+
+    revalidatePath('/admin/payments-delivery');
+    revalidatePath('/admin');
+    revalidatePath('/');
+
+    return {
+      success: true,
+      message: 'تم حذف تسعيرة المدينة بنجاح',
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'فشل حذف تسعيرة المدينة';
+    return { success: false, error: msg };
+  }
+}
+

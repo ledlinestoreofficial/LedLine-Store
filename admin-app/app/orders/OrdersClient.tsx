@@ -206,13 +206,20 @@ export function OrdersClient({ initialOrders }: OrdersClientProps) {
                         <p className="font-black text-[#111111] font-mono text-sm" dir="ltr">
                           {formatPriceEn(order.summary?.finalTotal)} SAR
                         </p>
-                        <span className="text-[10px] text-[#757575] uppercase font-bold">
-                          {order.paymentMethod === 'cod'
-                            ? 'الدفع عند الاستلام'
-                            : (order.paymentMethod as string) === 'bank_transfer'
-                            ? 'تحويل بنكي'
-                            : order.paymentMethod}
-                        </span>
+                        <div className="flex flex-col gap-1 mt-0.5">
+                          <span className="text-[10px] text-[#757575] font-bold">
+                            {order.paymentMethod === 'cod'
+                              ? 'الدفع عند الاستلام'
+                              : (order.paymentMethod as string) === 'bank_transfer'
+                              ? `تحويل بنكي ${order.selectedBankName ? `(${order.selectedBankName})` : ''}`
+                              : order.paymentMethod}
+                          </span>
+                          {order.depositReceiptUrl && (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded font-bold border border-amber-200/70 w-fit">
+                              <span>سند مرفق 📎</span>
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Status */}

@@ -16,6 +16,7 @@ import {
   Settings,
   LayoutDashboard,
   Megaphone,
+  CreditCard,
 } from 'lucide-react';
 
 const RAW_MOBILE_NAV = [
@@ -23,6 +24,7 @@ const RAW_MOBILE_NAV = [
   { path: '/banners', label: 'البنرات الإعلانية', icon: Megaphone },
   { path: '/products', label: 'المنتجات', icon: Package },
   { path: '/orders', label: 'الطلبات', icon: ShoppingBag },
+  { path: '/payments-delivery', label: 'الدفع والتوصيل', icon: CreditCard },
   { path: '/categories', label: 'الأقسام', icon: Layers },
   { path: '/inventory', label: 'المخزون', icon: Warehouse },
   { path: '/coupons', label: 'الكوبونات', icon: Tag },
@@ -48,6 +50,8 @@ export function AdminHeader() {
         return 'إدارة المنتجات والكتالوج';
       case '/orders':
         return 'إدارة الطلبات والمبيعات';
+      case '/payments-delivery':
+        return 'إدارة الدفع ورسوم التوصيل';
       case '/categories':
         return 'إدارة الأقسام والتصنيفات';
       case '/inventory':

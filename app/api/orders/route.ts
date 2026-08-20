@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { OrderCreationRequest, OrderApiResponse, CalculatedOrderItem, OrderRecord } from '@/src/types';
 import { getSanityProductById, createSanityOrder } from '@/src/lib/sanity.server';
+import { storeRepo } from '@/src/lib/store-data';
 
 export async function POST(request: Request): Promise<NextResponse<OrderApiResponse>> {
   try {
@@ -50,10 +51,17 @@ export async function POST(request: Request): Promise<NextResponse<OrderApiRespo
     }
 
     // 2. Validate Payment Method
-    const validPaymentMethods = ['mada', 'applepay', 'tamara', 'cod'];
+    const validPaymentMethods = ['mada', 'applepay', 'tamara', 'cod', 'bank_transfer'];
     if (!paymentMethod || !validPaymentMethods.includes(paymentMethod)) {
       return NextResponse.json(
         { success: false, error: 'طريقة الدفع المحددة غير مدعومة' },
+        { status: 400 }
+      );
+    }
+
+    if (paymentMethod === 'bank_transfer' && !body.depositReceiptUrl?.trim()) {
+      return NextResponse.json(
+        { success: false, error: 'يرجى إرفاق صورة سند أو إشعار الإيداع البنكي لإتمام الطلب' },
         { status: 400 }
       );
     }
@@ -141,8 +149,10 @@ export async function POST(request: Request): Promise<NextResponse<OrderApiRespo
       }
     }
 
-    // 6. Server-side Shipping Fee Calculation
-    const shippingFee = calculatedSubtotal >= 350 || calculatedItems.length === 0 ? 0 : 35;
+    // 6. Server-side Shipping Fee Calculation (Dynamic based on city and store settings)
+    const shippingFee = calculatedItems.length === 0 
+      ? 0 
+      : storeRepo.getDeliveryFee(customer.governorate, customer.city, calculatedSubtotal);
     const finalTotal = Math.max(0, calculatedSubtotal - discountAmount + shippingFee);
 
     // 7. Generate Unique Order Number
@@ -155,6 +165,7 @@ export async function POST(request: Request): Promise<NextResponse<OrderApiRespo
       customer: {
         fullName,
         phone,
+        governorate: customer.governorate?.trim() || '',
         city,
         address,
         notes: customer.notes?.trim() || '',
@@ -168,6 +179,9 @@ export async function POST(request: Request): Promise<NextResponse<OrderApiRespo
         finalTotal,
       },
       paymentMethod,
+      depositReceiptUrl: body.depositReceiptUrl?.trim() || undefined,
+      selectedBankId: body.selectedBankId?.trim() || undefined,
+      selectedBankName: body.selectedBankName?.trim() || undefined,
       status: 'pending',
       createdAt,
     };

@@ -310,15 +310,42 @@ export function OrderDetailsModal({
               </span>
             </div>
 
-            <div className="pt-2 flex items-center gap-2 text-[#757575] text-[11px]">
-              <CreditCard className="w-3.5 h-3.5 text-[#9CA3AF]" />
-              <span>طريقة الدفع: </span>
-              <span className="font-bold text-[#111111]">
-                {order.paymentMethod === 'mada' && 'مدى (Mada)'}
-                {order.paymentMethod === 'applepay' && 'Apple Pay'}
-                {order.paymentMethod === 'tamara' && 'تمارا (تقسيط على 4 دفعات)'}
-                {order.paymentMethod === 'cod' && 'الدفع عند الاستلام'}
-              </span>
+            <div className="pt-2 flex flex-col gap-2 text-[#757575] text-[11px]">
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-3.5 h-3.5 text-[#9CA3AF]" />
+                <span>طريقة الدفع: </span>
+                <span className="font-bold text-[#111111]">
+                  {order.paymentMethod === 'mada' && 'مدى (Mada)'}
+                  {order.paymentMethod === 'applepay' && 'Apple Pay'}
+                  {order.paymentMethod === 'tamara' && 'تمارا (تقسيط على 4 دفعات)'}
+                  {order.paymentMethod === 'cod' && 'الدفع عند الاستلام'}
+                  {order.paymentMethod === 'bank_transfer' && `تحويل بنكي / محفظة ${order.selectedBankName ? `(${order.selectedBankName})` : ''}`}
+                </span>
+              </div>
+
+              {/* Deposit Receipt Image Preview (سند الإيداع) */}
+              {order.depositReceiptUrl && (
+                <div className="mt-2 p-3 bg-white border border-[#E5E5E5] rounded-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-[#111111] text-xs">سند / إشعار الإيداع المرفق:</span>
+                    <a
+                      href={order.depositReceiptUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-[#D97706] hover:underline font-bold"
+                    >
+                      فتح الصورة بالحجم الكامل ↗
+                    </a>
+                  </div>
+                  <div className="w-full max-h-56 rounded-lg overflow-hidden bg-[#F5F5F5] border border-[#E5E5E5] flex items-center justify-center">
+                    <img
+                      src={order.depositReceiptUrl}
+                      alt="سند الإيداع"
+                      className="max-h-56 w-auto object-contain"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
